@@ -7,7 +7,7 @@ version  = '0.1'
 source   = 'https://github.com/underground-software/orbit'
 
 # make exernal GET request to find these documents
-logo_get    = '/kdlp.png'
+logo_get    = '/images/kdlp_logo.png'
 style_get   = '/style.css'
 
 orbitroot   = '/var/orbit'
