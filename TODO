@@ -44,21 +44,17 @@ random idea storage:
 
 
 
-
+config.py
+wsgi.py entry point
 radius
 ├── auth.py
-├── conf.py
 ├── dash.py
 ├── data.py
-├── db.default
 ├── hand.py
 ├── make.py
-├── radius.py
+├── db.default
 ├── radius.start
 ├── README.md
-├── rocket.py
+├── rock.py
 ├── start.ini
-├── utilities.py
-└── wsgi.py
-
-1 directory, 14 files
+├── util.py

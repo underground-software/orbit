@@ -3,12 +3,9 @@
 # hand: rocket handlers for each server request type
 #       use "le_" prefix for "hand.le_..()" usage
 
-import markdown, os, sys, re
-import orbit, auth, orbgen, dashboard
-
-import make
-
 from http import HTTPStatus
+import markdown, os, sys, re
+import make, auth, dash
 
 def le_welcome(rocket):
     makeme = make.form_welcome()
@@ -39,9 +36,9 @@ def le_login(rocket):
     return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
 
 def le_mail_auth(rocket):
-    # This should be invariant when ngninx is orbcfgured properly
+    # This should be invariant when ngninx is configured properly
     mail_env_vars = ('HTTP_AUTH_USER' 'HTTP_AUTH_PASS', 'HTTP_AUTH_PROTOCOL', 'HTTP_AUTH_METHOD')
-    [username, passwprd, protocol, method] = [rocket.envget(key) for key in mail_env_vars]
+    [username, password, protocol, method] = [rocket.envget(key) for key in mail_env_vars]
 
     if not username or not password or protocol not in ('smtp', 'pop') or method != 'plain':
         return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
@@ -66,13 +63,12 @@ def le_check(rocket):
 
 def le_logout(rocket):
     if rocket.queryget('username') and self.session:
-        return rocket.respond(HTTPStatus.OK, 'text/plain',
-            auth.del_by_username(self.username))
+        return rocket.respond(HTTPStatus.OK, 'text/plain', rocket.retire(self.username))
     else:
         return rocket.respond(HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS, 'text/plain', 'null')
 
 def le_dashboard(rocket):
-    return rocket.respond(HTTPStatus.OK, 'text/html', dashboard.dashboard(rocket.user))
+    return rocket.respond(HTTPStatus.OK, 'text/html', dash.dash(rocket.user))
 
 def le_stub(rocket, more=[]):
         make_cont = lambda meth_path: f'<h3>Developmennt sub for {meth_path} </h3>{"".join(more)}'
@@ -100,7 +96,7 @@ _OLD_NOTES="""
 	<h1>Save these credentials, you will not be able to access them again</h1><br>
 	<h3>Username: {username}</h1><br>
 	<h3>Password: {password}</h1><br>
-    return rocket.respond(orbgen.form_register())
+    return rocket.respond(sql.form_register())
 """.strip()
 
 def le_md(rocket, md_path):

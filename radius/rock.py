@@ -198,7 +198,7 @@ class rocket:
         # Prepare logo
         logo_div_doc  = ''
         logo_div_doc += make.img(self._cfg.logo_get, '[KDLP] logo', 'kdlp_logo')
-        logo_div_doc += orbgen.h1(TITLE, "title")
+        logo_div_doc += orbgen.h('1', self._cfg.title, 'title')
         logo_div_gen  =  lambda: orbgen.div('logo', logo_div_doc)
 
         # Prepare nav

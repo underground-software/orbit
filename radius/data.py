@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sqlite, radius
+import sqlite3
 
 # nickname  table name
 # USR => users
@@ -8,9 +8,10 @@ import sqlite, radius
 # SUB => submissions
 # REG => newusers
 
+# FIXME hardcoded here or should this be expected?
 def _sqlite3(command, set_=False, get_=False):
     dat = None
-    con = sqlite3.connect(radius.config.PATH_LOCAL_DATABASE)
+    con = sqlite3.connect('/var/orbit/orbit.db')
     new = con.cursor()
     ret = new.execute(command)
     if get_:

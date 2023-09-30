@@ -141,11 +141,7 @@ def new_by_username(username):
         if del_by_username(session.token) != 'username':
             [][0] # Generate an exception
             
-    orbdbs.do_sessions_
-    orbdbs.do_sessions_comm(orbdbs.SESSIONS_NEW, \
-            Session(gen_tok_hsh(username), username, gen_expiry().timestamp()))
-
-    return get_by_username(username)
+    return data.usr_ins((get_tok_hsh(username), username), gen_expiry().timestamp())
 
 def del_by_username(username):
     """
@@ -156,7 +152,7 @@ def del_by_username(username):
         | $token if this invocation sucessfully invalidates a corresponding valid session
         | None otherwise
     """
-    return orbdbs.sessions_delete_by_username(username)
+    return data.ses_delby_username(username)
 
 def del_by_token(token):
     """
@@ -167,7 +163,7 @@ def del_by_token(token):
         | $token if this invocation sucessfully invalidates a corresponding valid session
         | None otherwise
     """
-    return orbdbs.sessions_delete_by_token(token)
+    return data.ses_delby_token(token)
 
 def get_by_username(username):
     """
@@ -178,7 +174,7 @@ def get_by_username(username):
         | session validated by $username if extant
         | None otherwise
     """
-    return orbdbs.sessions_select_by_username(username)
+    return data.ses_getby_username(username)
 
 def get_by_token(token):
     """
@@ -190,7 +186,7 @@ def get_by_token(token):
         | session validated by $token if extant
         | None otherwise
     """
-    return orbdbs.sessions_select_by_token(token)
+    return data.ses_getby_token(token)
 
 # Password hashing and checking handled by the bcrypt library
 _chck_pass = lambda creds: bcrypt.checkpw(*tuple(map(orbit.bytes8, creds)))

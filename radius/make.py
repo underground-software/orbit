@@ -1,24 +1,6 @@
 def h(v, c, cls='', attrs=''):
     return f'<h{v} class="{cls}" {attrs} >{c}</h{v}>'
 
-
-h = lambda  v, c, cls='': f'<h{v} class="{cls}">{c}</h>'
-
-def h1(c, cls=''):
-    return h(1, c, cls=cls)
-
-def h2(c):
-    return h(2, c)
-
-def h3(c):
-    return h(3, c)
-
-def h4(c):
-    return h(4, c)
-
-def h5(c):
-    return h(5, c)
-
 def t_i(i):
     return ''.join(['\t' for x in range(i)])
 
@@ -38,7 +20,7 @@ def table_data(c, h=False, i=0):
     d = 'd'
     if h:
         d = 'h'
-    a, b = f'<t{d}>', f'</t{d}'
+    a, b = f'<t{d}>', f'</t{d}>'
     return oOo(i, a, c, b)
 
 def table_row(c, h=False, i=0):
@@ -98,18 +80,48 @@ _pair_fmtr = lambda pair_list: pair_join([pair_fmtr(fmt)(pr) for pr in pair_list
 
 msg_blk = lambda pair_list: _sepr_call(_par, pair_list, sep)
 
-def form(attr, c):
-    return f'<form {attr} >{c} </form>'
+encode  = lambda dat: bytes(dat, "UTF-8")
 
-def form_login():
-    return form(' id="login" method="post" action="/login" ',
-        label(' for="username" ', 'Username: <br />') + \
-        input_(' name="username" type="text" id="username" ') + \
-        '<br />' + \
-        label(' for="username" ', 'Username: <br />') + \
-        input_(' name="password" type="password" id="password" ') + \
-        '<br />' + \
-        button('Submit', 0, ' type="submit" '))
+form_welcome_template="""
+	<div class="logout_info">
+        <div class="logout_left">
+        {}
+        </div>
+
+	<div class="logout_right">
+        <h5> Welcome!</h5>
+        </div>
+	</div>
+
+	<div class="logout_buttons">
+    {}
+	</div>
+""".strip()
+
+
+form_welcome_buttons="""
+	<form id="logout" method="get" action="/login">
+		<input type="hidden" name="logout" value="true">
+		<button type="submit" class="logout">Logout</button>
+	</form>
+	<form id="renew" method="get" action="/login">
+		<input type="hidden" name="renew" value="true">
+		<button type="submit" class="renew">Renew</button>
+	</form>
+"""
+
+
+form_login="""
+	<form id="login" method="post" action="/login">
+		<label for="username">Username:<br /></label>
+		<input name="username" type="text" id="username" />
+	<br />
+		<label for="password">Password:<br /></label>
+		<input name="password" type="password" id="password" />
+	<br />
+		<button type="submit">Submit</button>
+	</form>
+"""
 
 def cookie_info_table(session):
     return table([
@@ -127,17 +139,14 @@ def logout_buttons():
         input_(' id="renew" method="get" action="/" ')         +\
         button('Renew', 0, ' type="submit" class="renew" '))
 
-def form_welcome(session):
-    return div('logout_info', 
-        div('logout_left', gen_cookie_info_table(session)) + \
-        div('logout_right',
-        div('logout_right_inner',
-        h5("Welcome!") + ul([a('Dashboard', '/dashboard')]))))  + \
-        div('logout_buttons', gen_logout_buttons())
+def make_form_welcome(session):
+    return form_welcome_template.format(cookie_info_table(session), logout_buttons())
 
-def form_register():
-    return form(' id="register" method="post" action="/register" ',
-            label(' for="student_id" ','Student ID:') + \
-            input_(' name="student_id" type="text" id="student_id" ') + \
-            '<br />' + \
-            button('Submit', ' type="submid" '))
+
+form_register"""
+    		<form id="register" method="post" action="/register">
+                <label for="student_id">Student ID:</label>
+                <input name="student_id" type="text" id="student_id" /><br />
+                <button type="submit">Submit</button>
+            </form>
+""".strip()
