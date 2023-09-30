@@ -3,6 +3,10 @@
 import requests, os, sys, http, urllib, radius
 from urllib.parse import parse_qs
 
+whoami   = 'radius'
+version  = '0.1'
+source   = 'https://github.com/underground-software/radius'
+
 class rocket:
     """
     radius.Rocket: Radius user request context
@@ -48,8 +52,8 @@ class rocket:
 
     """
 
-    def __init__,(self, environ, start_res, root):
-        self.root       = root
+    def __init__,(self, environ, start_res, cfg):
+        self._cfg       = root
         self._environ   = environ
         self._start_res = start_res
         self._path_info = None
@@ -184,19 +188,18 @@ class rocket:
     def format_html(self, doc):
         # generate a reproduction of the original header without too much abstraction for initial version
 
-        # general constant 
-        TITLE   = 'Kernel Development Learning Pipeline'
+        # general constants
         HR      = '<hr />'
         BR      = '<br />'
         APP_VERSION_SRC     = f'{APPLICATION} {VERSION} {SOURCE}'
-        LINK_STYLE_CSS      = '<link rel="stylesheet" type="text/css" href="/style.css />'
+        LINK_STYLE_CSS      = '<link rel="stylesheet" type="text/css" href="{self._cfg.style_get}"/>'
         META_CHARSET_UTF8   = '<meta charset="UTF-8">'
 
         # Prepare logo
         logo_div_doc  = ''
-        logo_div_doc += orbgen.img('/kdlp_logo.png', '[KDLP] logo', 'kdlp_logo')
+        logo_div_doc += make.img(self._cfg.logo_get, '[KDLP] logo', 'kdlp_logo')
         logo_div_doc += orbgen.h1(TITLE, "title")
-        logo_div_gen  = lambda: orbgen.div(' class="logo" ', logo_div_doc)
+        logo_div_gen  =  lambda: orbgen.div('logo', logo_div_doc)
 
         # Prepare nav
         # FIXME: consider putting in config

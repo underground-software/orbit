@@ -1,6 +1,9 @@
 def h(v, c, cls='', attrs=''):
     return f'<h{v} class="{cls}" {attrs} >{c}</h{v}>'
 
+
+h = lambda  v, c, cls='': f'<h{v} class="{cls}">{c}</h>'
+
 def h1(c, cls=''):
     return h(1, c, cls=cls)
 
@@ -94,12 +97,6 @@ _sepr_call = lambda x, y, z: z + x(y) + z
 _pair_fmtr = lambda pair_list: pair_join([pair_fmtr(fmt)(pr) for pr in pair_list])
 
 msg_blk = lambda pair_list: _sepr_call(_par, pair_list, sep)
-"""
-orbgen.msg_blk(func, pair):
-    components of a pair to 
-(callable_func, pair):
-    return a pair of the results of each invocatio
-"""
 
 def form(attr, c):
     return f'<form {attr} >{c} </form>'
@@ -131,10 +128,12 @@ def logout_buttons():
         button('Renew', 0, ' type="submit" class="renew" '))
 
 def form_welcome(session):
-    return div(' class="logout_ifo" ', div(' class="logout_left" ', gen_cookie_info_table(session)) + \
-        div(' class="logout_right" ',
-            div(' class="logout_right_inner" ', h5("Welcome!") + ul([a('Dashboard', '/dashboard')]))))  + \
-        div(gen_logout_buttons() ,' class="logout_buttons" ')
+    return div('logout_info', 
+        div('logout_left', gen_cookie_info_table(session)) + \
+        div('logout_right',
+        div('logout_right_inner',
+        h5("Welcome!") + ul([a('Dashboard', '/dashboard')]))))  + \
+        div('logout_buttons', gen_logout_buttons())
 
 def form_register():
     return form(' id="register" method="post" action="/register" ',

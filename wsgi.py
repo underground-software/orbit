@@ -2,9 +2,10 @@
 
 import re
 import radius
+import config
 
 def application(env, SR):
-    rocket = radius.rock.rocket(env, SR)
+    rocket = radius.rock.rocket(env, SR, config)
     if re.match("^(/login|/check|/logout/|/mail_auth)", rocket.path_info):
         return radius.hand.le_login(rocket)
     elif re.match("^/dashboard", rocket.path_info):
