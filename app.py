@@ -3,7 +3,7 @@
 # it's all one things now
 
 from http import HTTPStatus
-import markdown, os, re,
+import markdown, os, re
 import sys, datetime, bcrypt, hashlib
 from datetime import datetime
 import sqlite3
@@ -463,7 +463,7 @@ enticate.__doc__="""
         |   False otherwise
     """.strip()
 
-class rocket:
+class Rocket:
     """
     radius.Rocket: Radius user request context
                    resposible for ensuring authention is performed correctly
@@ -864,3 +864,16 @@ def handle_try_md(rocket):
         return handle_md(rocket, md_path)
     else:
         return rocket.respond(HTTPStatus.NOT_FOUND, 'text/html', 'HTTP 404 NOT FOUND')
+
+import config
+
+def application(env, SR):
+    rocket = Rocket(env, SR, config)
+    if re.match("^(/login|/check|/logout/|/mail_auth)", rocket.path_info):
+        return handle_login(rocket)
+    elif re.match("^/dashboard", rocket.path_info):
+        return handle_dashboard(rocket)
+    elif re.match("^/register", rocket.path_info):
+        return handle_register(rocket)
+    else:
+        return handle_try_md(rocket)

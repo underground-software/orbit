@@ -1,7 +1,6 @@
 import sys, datetime, bcrypt, hashlib
 from datetime import datetime
 
-from . import data
 # Constants
 sec_per_min = 60
 min_per_ses = 180
