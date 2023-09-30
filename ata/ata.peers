@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Generate peer review assignments for $1 from local submission knowledge
+
+PS4="-|"
+
+source ata.conf
+
+who_subbed="$(mktemp)"
+die() { echo "error: $1" ; exit 1 ; } 
+
+[ -z "$1" ] && die "assignment name required as argument"
+
+( cd "${EMAIL_DIR}/${1}" && cat *  | awk '{print $2}' | grep -v "^$" > $who_subbed )
+
+./ata.peers.py $who_subbed

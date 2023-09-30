@@ -1,0 +1,4 @@
+#!/bin/bash
+
+export SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+watch -n 0.3 $SCRIPT_DIR/ata.info
