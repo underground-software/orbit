@@ -1,3 +1,0 @@
-# radius
-
-consolidated uwsgi server

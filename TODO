@@ -1,35 +1,10 @@
-TREE PATH	STATUS		INFO
-orbit
-├── big.bang 	stub		most of email part is gojod
-├── big.config	todo at end	?
-├── dnf.deps	todo at end	for integration into package
-├── pip.deps	todo at end
-├── radius.ini 	NEW		uwsgi config for radius
-└── README.md	todo at end	DNE
+Feature 	Implementation
 
-├── backups	rev		good for v1
-│   ├── dlp.sh	done 		do_remote_backup from dev-01.kdlp
-│   ├── drb.sh	done		do_local_backup
-│   ├── prod.h	do_remote_backup	prod.hostname
-│   ├── pseudo 	?		# notes ? not sure why this is here
-│   ├── RDME.md	todo at end
-│   ├── rfb.sh	done		restore_from_backup
-│   └── rfr.sh	done		restore_from_remote (prod=>local)
-├── radius	current task	top priority
-│   ├── au.py	todo		auth
-│   ├── b.dfl	todo at end	db.default: need update
-│   ├── )isis.py	todo		basic functionality kinda works
-│   ├── gener	todo		only basic refactor until stable
-│   ├── r_rocket odo		review & rename to radius_rocket
-│   ├── r_cg.py	todo at end	big bang integration
-│   ├── r_db.py	rev		close to done?
-│   ├── r_dispy	todo		registration 
-│   ├── r_wsgi.py	todo		wsgi file and entry point
-│   ├── r.py		todo		with rest of work
-│   ├── rs.start	todo		big.bang integration
-│   ├── README.md	todo at end
-│   ├── setup.sh	todo at end	big bang integration
-│   └── start.ini	todo at end	generate from big.bang
+email		pop3/smtp
+md2html		radius
+auth		radius
+autograder	ata
+deploy		big.bang
 
 
 Secure data:
@@ -41,20 +16,46 @@ random idea storage:
 - big.bang could be passed a backup to restore state
 - idemptent function mapping a root and backup
 
-
-radius
-├── auth.py
-├── dash.py
-├── data.py
+orbit
+├── ata
+│   ├── ata.conf
+│   ├── ata.info
+│   ├── ata.monitor
+│   ├── ata.onsub
+│   ├── ata.onsub.py
+│   ├── ata.peers
+│   ├── ata.peers.py
+│   ├── ata.tbreak
+│   └── ata.watchdog
+├── backup
+│   ├── do_local_backup.sh
+│   ├── do_remote_backup.sh
+│   ├── prod.hostname
+│   ├── README.md
+│   ├── restore_from_backup.sh
+│   └── restore_from_remote.sh
+├── big.bang
+├── config.py
 ├── db.default
-├── hand.py
-├── __init__.py
-├── make.py
+├── dnf.deps
+├── ini.c
+├── log.rad
+├── multitool.sh
+├── orbit.db
+├── orbit.ini
+├── pip.deps
+├── pop3
+│   ├── Makefile
+│   └── pop3.c
+├── radius.py
+├── radius.service
 ├── radius.start
-├── README.md
-├── rock.py
-└── start.ini
+├── sessions.db
+├── smtp
+│   ├── Makefile
+│   └── smtp.c
+├── start.ini
+├── TODO
+└── wsgi.py
 
-2 directories, 19 files
-
-Unified change
+5 directories, 36 files

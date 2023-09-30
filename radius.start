@@ -1,6 +1,3 @@
 #!/bin/bash
 
-uwsgi \
-	--wsgi-file	wsgi.py	\
-	--http		:9098	\
-	--logto		log.rad
+uwsgi start.ini
