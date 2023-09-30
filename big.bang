@@ -21,7 +21,10 @@ FQDN="${SRVNAME:-$(hostname)}"
 setsebool -P httpd_can_network_connect 1
 # don't forget to run in data root
 chcon -R -t httpd_sys_content_t .
-`
+
+# setup database
+sqlite3 orbit.db ".read db.default" ".exit"
+
 
 # the assignment list currently lives in
 # mercury, but this will change as we

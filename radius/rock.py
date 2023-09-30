@@ -12,6 +12,8 @@ class rocket:
 
     Attributes
     ----------
+    root : str
+        Absolute filesystem path to public data root
 
     path_info : str
         Absolute path requested by user
@@ -46,7 +48,8 @@ class rocket:
 
     """
 
-    def __init__(self, environ, start_res):
+    def __init__,(self, environ, start_res, root):
+        self.root       = root
         self._environ   = environ
         self._start_res = start_res
         self._path_info = None
@@ -82,9 +85,9 @@ class rocket:
 
     # this handles our two sesion case,
     # but this is the place to extend for more general multi-session usage
-    def for(self):
+    def forwho(self):
         if self.session:
-            return ['UML', 'LFX'][radius.db.usr_getif_lfx_username(username) is not None]
+            return ['UML', 'LFX'][data.usr_getif_lfx_username(username) is not None]
 
     @property
     def method(self):

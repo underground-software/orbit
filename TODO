@@ -32,7 +32,6 @@ orbit
 │   └── start.ini	todo at end	generate from big.bang
 
 
-Data
 Secure data:
 - email storage configured by big.bang imported from webservers dev
 - tables in consolidated database, start with orbit.db
@@ -41,3 +40,25 @@ Secure data:
 random idea storage:
 - big.bang could be passed a backup to restore state
 - idemptent function mapping a root and backup
+
+
+
+
+
+radius
+├── auth.py
+├── conf.py
+├── dash.py
+├── data.py
+├── db.default
+├── hand.py
+├── make.py
+├── radius.py
+├── radius.start
+├── README.md
+├── rocket.py
+├── start.ini
+├── utilities.py
+└── wsgi.py
+
+1 directory, 14 files
