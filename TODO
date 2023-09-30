@@ -1,10 +1,12 @@
 TREE PATH	STATUS		INFO
-ORBIT
+orbit
 ├── big.bang 	stub		most of email part is gojod
-├── config.py	todo at end	?
+├── big.config	todo at end	?
 ├── dnf.deps	todo at end	for integration into package
 ├── pip.deps	todo at end
+├── radius.ini 	NEW		uwsgi config for radius
 └── README.md	todo at end	DNE
+
 ├── backups	rev		good for v1
 │   ├── dlp.sh	done 		do_remote_backup from dev-01.kdlp
 │   ├── drb.sh	done		do_local_backup
@@ -14,15 +16,14 @@ ORBIT
 │   ├── rfb.sh	done		restore_from_backup
 │   └── rfr.sh	done		restore_from_remote (prod=>local)
 ├── radius	current task	top priority
-│   ├── auth.py	todo
-│   ├── dash.py	todo		review for delete
-│   ├── db.dfl	todo at end	db.default: need update
-│   ├── isis.py	todo		basic functionality kinda works
-│   ├── orbgen.py	todo		only basic refactor until stable
-│   ├── orbit.py	todo		review & rename to radius_rocket
-│   ├── r_config.py	todo at end	big bang integration
-│   ├── r_database.py	rev		close to done?
-│   ├── r_dispatch.py	todo		registration 
+│   ├── au.py	todo		auth
+│   ├── b.dfl	todo at end	db.default: need update
+│   ├── )isis.py	todo		basic functionality kinda works
+│   ├── gener	todo		only basic refactor until stable
+│   ├── r_rocket odo		review & rename to radius_rocket
+│   ├── r_cg.py	todo at end	big bang integration
+│   ├── r_db.py	rev		close to done?
+│   ├── r_dispy	todo		registration 
 │   ├── r_wsgi.py	todo		wsgi file and entry point
 │   ├── r.py		todo		with rest of work
 │   ├── rs.start	todo		big.bang integration
@@ -30,16 +31,13 @@ ORBIT
 │   ├── setup.sh	todo at end	big bang integration
 │   └── start.ini	todo at end	generate from big.bang
 
+
+Data
 Secure data:
-email storage configured by big.bang imported from webservers dev
-tables in consolidated database, start with orbit.db
+- email storage configured by big.bang imported from webservers dev
+- tables in consolidated database, start with orbit.db
 (these can go in /var/orbit/<name> now I suppose)
 
-
-moving wsgi to own src
-
-random idea storage
-big.bang could be passed a backup to restore state
-
-
-quick: orbit TODO backupg
+random idea storage:
+- big.bang could be passed a backup to restore state
+- idemptent function mapping a root and backup
