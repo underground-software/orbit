@@ -1,0 +1,9 @@
+[submodule "radius"]
+	path = radius
+	url = ./radius
+[submodule "backups"]
+	path = backups
+	url = ./backups
+[submodule "kdlp.underground.software"]
+	path = kdlp.underground.software
+	url = ./kdlp.underground.software/

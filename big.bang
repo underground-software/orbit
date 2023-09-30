@@ -1,0 +1,287 @@
+#!/bin/bash
+#
+# big.bang: idemotent orbit installation
+#
+#!/bin/bash
+
+PS4="-|"
+set -e -x
+
+SMTP_PORT=1465
+SMTP_PORT_EXT=465
+POP3_PORT=1995
+POP3_PORT_EXT=995
+
+PRE="/var/orbit"
+ME="$PRE/big.bang"
+
+FQDN="${SRVNAME:-$(hostname)}"
+
+# allow the server to access the network
+setsebool -P httpd_can_network_connect 1
+# don't forget to run in data root
+chcon -R -t httpd_sys_content_t .
+`
+
+# the assignment list currently lives in
+# mercury, but this will change as we
+# refactor our database backend
+ATABIN="$PRE/cano.py/mercury"
+AFILE_LOCAL="$ATABIN/assignments.list"
+
+# incoming mail is stored here
+EDATA="$PRE/email_data"
+SVCDIR="/etc/systemd/system"
+
+die() { echo "error: $1";   exit 1 ; }
+
+[ "$(id -u)" == "0" ] || die "this script mut be run by root"
+[ ! -z "$SRVNAME" ] || die "env var SRVNAME must be defined"
+
+
+### DEPLOY POP AND SMTP
+
+# Build the server executables
+
+dnf install -y "$(cat $ME/dnf.deps)" > /dev/null || die "failed to install dnf.deps"
+
+pip install -r "$ME/pip.deps"
+
+make -C smtp SRVNAME="$FQDN" > /dev/null
+make -C pop > /dev/null
+
+# TODO: TEST THIS on system with SELinux enabled
+# Configure SELinux to allow systemd to
+# run the email server binaries
+# semanage fcontext -a -t bin_t $ME/pop/pop3
+# semanage fcontext -a -t bin_t $ME/smtp/smtp
+# restorecon -R -v $ME
+#setsebool -P domain_can_mmap_files 1
+
+
+# Configure smtp and pop users and groups
+
+# system account, no home dir,
+# no login shell, home is /
+id -u smtp 2>&1 > /dev/null 		\
+	|| useradd -r -M 		\
+		-s /usr/sbin/nologin 	\
+		-d / 			\
+		-c "smtp server user" 	\
+		smtp
+
+# system account, no home dir,
+# no login shell, home is /
+# in smtp group
+id -u pop 2>&1 > /dev/null 		\
+	|| useradd -r -M 		\
+		-s /usr/sbin/nologin 	\
+		-d / 			\
+		-G "smtp" 		\
+		-c "pop server user" 	\
+		pop
+
+# Create mail inbox and submission log
+
+mkdir -p 	$EDATA
+chmod 0710 	$EDATA
+mkdir -p 	$EDATA/mail
+chmod 0750 	$EDATA/mail
+mkdir -p 	$EDATA/logs
+chmod 0700 	$EDATA/logs
+
+chown -R smtp:smtp $EDATA
+
+# Create submission queue for each assignment
+
+AFILE="$AFILE_LOCAL"
+# assignment folder creation
+for ANAME in $(grep -v "^#" $AFILE | awk '{print $2}' )
+do
+	# add system group
+	getent group $ANAME > /dev/null || groupadd -r -U smtp $ANAME
+	ADIR="$EDATA/$ANAME"
+	mkdir -p $ADIR
+	chmod 0700 $ADIR
+	chown smtp:$ANAME $ADIR
+
+
+if [ -z "$SKIP_SVC_INSTALL" ]; then
+
+	# create systemd.path and service trigger for each assigment
+		cat > $SVCDIR/ata-$ANAME.path <<EOF
+[Path]
+PathModified=$EDATA/$ANAME
+Unit=ata-$ANAME.service
+EOF
+
+		cat > $SVCDIR/ata-$ANAME.service <<EOF
+[Unit]
+Description=automatic TA service for $ANAME
+OnFailure=ata-$ANAME-tbreak.service
+After=smtp.socket
+
+[Service]
+ExecStart=$ATABIN/ata.onsub $ANAME
+WorkingDirectory=/var/orbit/email_data/$ANAME
+Type=exec
+
+EOF
+
+		cat > $SVCDIR/ata-$ANAME-tbreak.service <<EOF
+[Unit]
+Description=give $ANAME a tolerance break
+
+[Service]
+ExecStart=$ATABIN/ata.tbreak $ANAME
+WorkingDirectory=$ATABIN
+Type=exec
+
+EOF
+
+		cat > $SVCDIR/ata-$ANAME-watchdog.service <<EOF
+[Unit]
+Description=Lazily trigger restart on ata $ANAME downtime
+After=ata-$ANAME.service
+
+[Service]
+ExecStart=$ATABIN/ata.watchdog $ANAME
+WorkingDirectory=$ATABIN
+
+EOF
+fi
+
+done
+
+# Install systemd services
+
+cat > $SVCDIR/smtp@.service <<EOF
+[Unit]
+Description=per-connection smtp service
+
+[Service]
+User=smtp
+StandardInput=socket
+CapabilityBoundingSet=cap_dac_read_search
+AmbientCapabilities=cap_dac_read_search
+ExecStart=$ME/smtp/smtp $EDATA
+EOF
+
+cat > $SVCDIR/smtp.socket <<EOF
+[Unit]
+Description=smtp server socket
+
+[Socket]
+ListenStream=127.0.0.1:$SMTP_PORT
+FreeBind=true
+Accept=yes
+
+[Install]
+WantedBy=sockets.target
+EOF
+
+cat > $SVCDIR/pop@.service <<EOF
+[Unit]
+Description=per-connection pop service
+
+[Service]
+User=pop
+StandardInput=socket
+ExecStart=$ME/pop/pop3 $EDATA/mail/
+EOF
+
+cat > $SVCDIR/pop.socket <<EOF
+[Unit]
+Description=pop3 server socket
+
+[Socket]
+ListenStream=127.0.0.1:$POP3_PORT
+FreeBind=true
+Accept=yes
+
+[Install]
+WantedBy=sockets.target
+EOF
+
+# Immediately enable email servers
+systemctl enable --now smtp.socket
+systemctl enable --now pop.socket
+
+
+systemctl daemon-reload
+systemctl enable --now $SVCDIR/ata-*.path
+
+# Validate configuration
+
+systemctl is-active --quiet smtp.socket \
+	|| echo "install smtp failed"
+systemctl is-active --quiet pop.socket  \
+	|| echo "install smtp failed"
+
+printf "QUIT\r\n" | netcat localhost 1465 | \
+	diff -up /dev/stdin <(printf \
+	"220 SMTP server ready\r\n221 Goodbye\r\n") \
+		|| echo "start smtp failed"
+
+printf "QUIT\r\n" | netcat localhost 1995 | \
+	diff -up /dev/stdin <(printf \
+	"+OK POP3 server ready\r\n+OK bye\r\n") \
+		|| echo "start pop3 failed"
+
+
+### NGINX AND SSL
+# note: consider moving to another script
+# and exending into one external access
+# configuration script setting up nginx,
+# and SSL certification
+#
+
+
+SSL_RAW=$(certbot certificates -d $FQDN 2>/dev/null)
+if grep -q 'No certificates found.' <<< "$SSL_RAW"; then
+	echo "no ssl certificate" ;
+	exit 1
+fi
+
+SSL_CRT=$(awk -F': ' '/Certificate Path/ { print $2 }' <<< $SSL_RAW)
+if test -z "${SSL_CRT}" ; then
+	echo "no .crt file for ssl" ;
+	exit 1
+fi
+
+SSL_KEY=$(awk -F': ' '/Private Key Path/ { print $2 }' <<< $SSL_RAW)
+if test -z "${SSL_CRT}" <<< "$SSL_RAW"; then
+	echo "no .crt file for ssl" ;
+	exit 1
+fi
+
+cat > /etc/nginx/conf.d/mail.conf <<EOF
+mail {
+	proxy_pass_error_message on;
+
+	ssl_certificate $SSL_CRT;
+	ssl_certificate_key $SSL_KEY;
+	ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+	server {
+		auth_http 127.0.0.1:9092/mail_auth;
+		listen $SMTP_PORT_EXT ssl;
+		protocol smtp;
+		smtp_auth plain login;
+		proxy_smtp_auth on;
+		xclient off;
+	}
+
+	server {
+		auth_http 127.0.0.1:9092/mail_auth;
+		listen $POP3_PORT_EXT ssl;
+		protocol pop3;
+		pop3_auth plain;
+	}
+}
+EOF
+
+MAIL_CONF="include /etc/nginx/conf.d/mail.conf;"
+if ! grep -q "^$MAIL_CONF$" /etc/nginx/nginx.conf; then
+	echo "$MAIL_CONF" >> /etc/nginx/nginx.conf
+fi
