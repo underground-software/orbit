@@ -42,19 +42,17 @@ random idea storage:
 - idemptent function mapping a root and backup
 
 
-
-
-config.py
-wsgi.py entry point
 radius
 ├── auth.py
 ├── dash.py
 ├── data.py
-├── hand.py
-├── make.py
 ├── db.default
+├── hand.py
+├── __init__.py
+├── make.py
 ├── radius.start
 ├── README.md
 ├── rock.py
-├── start.ini
-├── util.py
+└── start.ini
+
+2 directories, 19 files

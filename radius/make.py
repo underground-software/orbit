@@ -35,10 +35,10 @@ def table(c, i=0):
         h=False
     return oxo(i, '<table>', t, '</table>')
 
-def img(src, alt='', cls='', attrs='')
-    return f'<img src="{src}" alt="{alt}" class="{class}" {attrs} />'
+def img(src, alt='', cls='', attrs=''):
+    return f'<img src="{src}" alt="{alt}" class="{cls}" {attrs} />'
 
-def div(cls='radius_default' attr="", c="", i=0):
+def div(cls, attr="", c="", i=0):
     return oxo(i, f'<div class="{cls}" {attr} >', c, '</div>')
 
 def code(attr="", c="", i=0):
@@ -62,9 +62,6 @@ def button(c, i=0, a=''):
 def input_(attr=''):
     return f'<input {attr} >'
 
-def str8(string):
-	return str(string, "UTF-8")
-
 def DEBUG(strg):
     print(strg, file=sys.stderr)
 
@@ -81,6 +78,7 @@ _pair_fmtr = lambda pair_list: pair_join([pair_fmtr(fmt)(pr) for pr in pair_list
 msg_blk = lambda pair_list: _sepr_call(_par, pair_list, sep)
 
 encode  = lambda dat: bytes(dat, "UTF-8")
+decode  = lambda dat: str(dat, "UTF-8")
 
 form_welcome_template="""
 	<div class="logout_info">
@@ -98,7 +96,6 @@ form_welcome_template="""
 	</div>
 """.strip()
 
-
 form_welcome_buttons="""
 	<form id="logout" method="get" action="/login">
 		<input type="hidden" name="logout" value="true">
@@ -109,7 +106,6 @@ form_welcome_buttons="""
 		<button type="submit" class="renew">Renew</button>
 	</form>
 """
-
 
 form_login="""
 	<form id="login" method="post" action="/login">
@@ -131,19 +127,10 @@ def cookie_info_table(session):
         ('Expiry', session.expiry_fmt),
         ('Remaining Validity', session.remaining_validity)])
 
-def logout_buttons():
-    return form(' id="logout" method="get" action="/login" ',   \
-        input_(' type="hidden" name="logout" value="true" ')+   \
-        button('Logout', 0, ' type="submit" class="logout" ')) +\
-        form(' id="rewnew" method="get" action="/login" ',
-        input_(' id="renew" method="get" action="/" ')         +\
-        button('Renew', 0, ' type="submit" class="renew" '))
-
 def make_form_welcome(session):
     return form_welcome_template.format(cookie_info_table(session), logout_buttons())
 
-
-form_register"""
+form_register="""
     		<form id="register" method="post" action="/register">
                 <label for="student_id">Student ID:</label>
                 <input name="student_id" type="text" id="student_id" /><br />

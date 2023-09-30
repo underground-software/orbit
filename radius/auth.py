@@ -1,11 +1,10 @@
 import sys, datetime, bcrypt, hashlib
 from datetime import datetime
 
-import radius
-
+from . import data
 # Constants
 sec_per_min = 60
-_min_per_ses = radius.config.sesh_mins
+min_per_ses = 180
 
 # === auth cookie implementation === 
 

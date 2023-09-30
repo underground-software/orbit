@@ -1,11 +1,9 @@
 #!/bin/env python3
 
-import requests, os, sys, http, urllib, radius
+import requests, os, sys, http, urllib
 from urllib.parse import parse_qs
 
-whoami   = 'radius'
-version  = '0.1'
-source   = 'https://github.com/underground-software/radius'
+from . import make, auth
 
 class rocket:
     """
@@ -52,8 +50,8 @@ class rocket:
 
     """
 
-    def __init__,(self, environ, start_res, cfg):
-        self._cfg       = root
+    def __init__(self, environ, start_res, cfg):
+        self.root       = cfg.dataroot
         self._environ   = environ
         self._start_res = start_res
         self._path_info = None
@@ -61,6 +59,7 @@ class rocket:
         self._session   = None
         self._from_user = None
         self._msg       = "(silence)"
+        self._db        = cfg.database
         self._headers   = []
         self._format    = lambda x: x
         # Eventually, toggle CGI or WSGI
@@ -82,7 +81,7 @@ class rocket:
         return repr(self, tab='\t', nl='\n\t', end='\n')
 
     def env_get(self, key):
-        return self._environment.get(key, '')
+        return self._environ.get(key, '')
 
     def msg(self, msg):
         self._msg = msg
@@ -96,6 +95,12 @@ class rocket:
     @property
     def method(self):
         return ['GET', 'POST'][int(self.environ.get('CONTENT_LENGTH', 0)) > 0]
+
+    @property
+    def path_info(self):
+        if self._path_info is None:
+            self._path_info = self.env_get("PATH_INFO")
+        return self._path_info
 
     @property
     def queries(self):
@@ -145,7 +150,7 @@ class rocket:
     # or directly attempt login
     def launch(self, username='', password=''):
         if self.is_post_req():
-            urldecode = lambda key: html.escape(str8(self.queries.get(radius.encode(key), [b''])[0]))
+            urldecode = lambda key: html.escape(str8(self.queries.get(make.encode(key), [b''])[0]))
             username = urldecode('username')
             password = urldecode('password')
         self._session = auth.login(username, password)
@@ -198,22 +203,22 @@ class rocket:
         # Prepare logo
         logo_div_doc  = ''
         logo_div_doc += make.img(self._cfg.logo_get, '[KDLP] logo', 'kdlp_logo')
-        logo_div_doc += orbgen.h('1', self._cfg.title, 'title')
-        logo_div_gen  =  lambda: orbgen.div('logo', logo_div_doc)
+        logo_div_doc += make.h('1', self._cfg.title, 'title')
+        logo_div_gen  =  lambda: make.div('logo', logo_div_doc)
 
         # Prepare nav
         # FIXME: consider putting in config
-        nav_kvs = radius.config.NAV_BUTTONS
-        nav_btn_gen =    lambda: ''.join([orbgen.nav_button(pair[0], pair[1]) for pair in nav_kvs])
-        nav_div_gen =    lambda: f'{HR}\n{orbgen.div("nav", nav_btn_gen())}\n{HR}\n'
+        nav_kvs = self._cfg.NAV_BUTTONS
+        nav_btn_gen =    lambda: ''.join([make.nav_button(pair[0], pair[1]) for pair in nav_kvs])
+        nav_div_gen =    lambda: f'{HR}\n{make.div("nav", nav_btn_gen())}\n{HR}\n'
 
         # Prepare footer
         msg_doc  = ''
-        msg_doc += [( 'whoami', radius.whoami)]
-        msg_doc += [('version', radius.version)]
-        msg_doc += [( 'source', radius.source)]
-        msg_doc += [(    'msg', self._msg)]
-        msg_fmt = lambda kv: orbgen.code(attrs='', c='{} = {}').format(*kv)
+        msg_doc += [( 'whoami', self._cfg.whoami)]
+        msg_doc += [('version', self._cfg.version)]
+        msg_doc += [( 'source', self._cfg.source)]
+        msg_doc += [(    'msg', self._cfg._msg)]
+        msg_fmt = lambda kv: make.code(attrs='', c='{} = {}').format(*kv)
         msg_blk = lambda brdr, kvs: brdr + ''.join([msg_fmt(kv) for kv in kvs])
 
         # Concatenate all components to complete this format operation
@@ -238,4 +243,4 @@ class rocket:
                 code = http.HTTPStatus.INTERNAL_SERVER_ERROR
                 document = 'ERROR: BAD RADIUS CONTENT DESCRIPTION'
         self._start_response(f'{code.value} {code.phrase}', self.headers)
-        return [radius.encode(document)]
+        return [make.encode(document)]

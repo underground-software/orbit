@@ -4,9 +4,7 @@
 
 from datetime import datetime
 import random
-from sql import submissions_get_by_username, assignments_get_all
-
-from orbgen import table
+from . import make, data
 
 def dashboard_table(ass_pair, subd):
     fmt = [('Submission IDs', 'Time Recieved', 'Summary',  'Email IDs', 'Grade')]
@@ -23,7 +21,7 @@ def dashboard_table(ass_pair, subd):
         pass
 
     print('FMT:', str(fmt))
-    return table(fmt)
+    return make.table(fmt)
 
 # REVISION INDEX | DATETIME RECV | COMMENTS | GRADE
 def dashboard(user):

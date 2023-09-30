@@ -1,5 +1,0 @@
-#!/bin/bash
-
-uwsgi \
-	--wsgi-file 	app.py	\
-	--http			:9098

@@ -1,13 +1,12 @@
 #!/bin/env python3
 
 # hand: rocket handlers for each server request type
-#       use "le_" prefix for "hand.le_..()" usage
 
 from http import HTTPStatus
 import markdown, os, sys, re
-import make, auth, dash
+from . import make, dash
 
-def le_welcome(rocket):
+def handle_welcome(rocket):
     makeme = make.form_welcome()
     match rocket.queries:
         case ('logout', 'true'):
@@ -21,9 +20,9 @@ def le_welcome(rocket):
             rocket.msg(f'{rocket.username} authenticated by token')
     return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
 
-def le_login(rocket):
+def handle_login(rocket):
     if rocket.session:
-        return le_welcome()
+        return handle_welcome()
     makeme = make.form_login()
     if  rocket.method == "POST":
         if rocket.launch():
@@ -35,7 +34,7 @@ def le_login(rocket):
         rocket.msg('welcome, please login')
     return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
 
-def le_mail_auth(rocket):
+def handle_mail_auth(rocket):
     # This should be invariant when ngninx is configured properly
     mail_env_vars = ('HTTP_AUTH_USER' 'HTTP_AUTH_PASS', 'HTTP_AUTH_PROTOCOL', 'HTTP_AUTH_METHOD')
     [username, password, protocol, method] = [rocket.envget(key) for key in mail_env_vars]
@@ -55,28 +54,28 @@ def le_mail_auth(rocket):
 
     return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
 
-def le_check(rocket):
+def handle_check(rocket):
     if rocket.token_from_query() and rocket.session:
         return rocket.respond(HTTPStatus.OK, 'text/plain', session.username)
     else:
         return rocket.respond(HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS, 'text/plain', 'null')
 
-def le_logout(rocket):
+def handle_logout(rocket):
     if rocket.queryget('username') and self.session:
         return rocket.respond(HTTPStatus.OK, 'text/plain', rocket.retire(self.username))
     else:
         return rocket.respond(HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS, 'text/plain', 'null')
 
-def le_dashboard(rocket):
+def handle_dashboard(rocket):
     return rocket.respond(HTTPStatus.OK, 'text/html', dash.dash(rocket.user))
 
-def le_stub(rocket, more=[]):
+def handle_stub(rocket, more=[]):
         make_cont = lambda meth_path: f'<h3>Developmennt sub for {meth_path} </h3>{"".join(more)}'
         meth_path = f'{rocket.method()} {rocket.path_info}'
         return rocket.respond(HTTPStatus.OK, 'text/plain', make_cont(meth_path))
 
-def le_register(rocket):
-    return le_stub(rocket, [f'{make.code(OLD_NOTES)}'])
+def handle_register(rocket):
+    return handle_stub(rocket, [f'{make.code(OLD_NOTES)}'])
 
 # TODO: use this to implement register
 _OLD_NOTES="""
@@ -99,14 +98,14 @@ _OLD_NOTES="""
     return rocket.respond(sql.form_register())
 """.strip()
 
-def le_md(rocket, md_path):
+def handle_md(rocket, md_path):
     with open(md_path, 'r', newline='') as f:
         content = markdown.markdown(f.read(), extensions=['tables', 'fenced_code'])
         return rocket.respond(HTTPStatus.OK, 'text/html', content)
 
-def le_try_md(rocket):
+def handle_try_md(rocket):
     md_path = f'{rocket.root}{rocket.path_info}'
     if re.match("^(?!/cgit)(.*\.md)$", rocket.path_info) and os.access(md_path, os.R_OK):
-        return le_md(rocket, md_path)
+        return handle_md(rocket, md_path)
     else:
         return rocket.respond(HTTPStatus.NOT_FOUND, 'text/html', 'HTTP 404 NOT FOUND')

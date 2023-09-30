@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import sqlite3
 
 # nickname  table name
@@ -8,20 +6,21 @@ import sqlite3
 # SUB => submissions
 # REG => newusers
 
-# FIXME hardcoded here or should this be expected?
-def _sqlite3(command, set_=False, get_=False):
+def cmd(cmd, set_=False, get_=False):
     dat = None
+    # FIXME
     con = sqlite3.connect('/var/orbit/orbit.db')
     new = con.cursor()
-    ret = new.execute(command)
+    ret = new.execute(cmd)
     if get_:
         dat = ret.fetchall()
     if set_:
         ret.execute("COMMIT;")
     con.close()
-    return result
-_set                   = lambda cmd: _sqlite3(c, _set=True)
-_get                   = lambda cmd: _sqlite3(c, _get=True)
+    return dat
+
+_set = lambda cmd: _sqlite3(c, _set=True)
+_get = lambda cmd: _sqlite3(c, _get=True)
 
 # session table interface
                                 
@@ -71,15 +70,15 @@ ses_get                 = lambda    : _get(SES_GET)
 USR_PWDHASHFOR_USERNAME="""
 SELECT pwdhash
 FROM users
-WHERE username = "{}"
+WHERE username = "{}";
 """.strip()
-usr_pwdhashfor_username = lambda usn: _get(USR_GET)
+usr_pwdhashfor_username = lambda usn: _get(USR_PWDHASHFOR_USERNAME.format(usn))
 
 USR_INS="""
 INSERT INTO users (username, pwdhash, lfx, student_id)
-VALUES ("{}", "{}", "{}", "{}");"
+VALUES ("{}", "{}", "{}", "{}");
 """.strip()
-usr_ins =               = lambda usr: _set(USR_INS.format(usr))
+usr_ins                 = lambda usr: _set(USR_INS.format(usr))
 
 USR_GET="""
 SELECT id, username, pwdhash, lfx
