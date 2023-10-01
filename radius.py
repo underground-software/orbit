@@ -205,11 +205,11 @@ class Session:
 
         return  [('Set-Cookie', cookie_val)]
 
-    def __repr__(self, sep=''):
-        return f'Session({self.token},{sep}{self.username},{sep}{self.expiry})'
+    def __repr__(self):
+        return f'Session({self.token},{self.username},{self.expiry})'
 
     def __str__(self):
-        return repr(self, sep=' ')
+        return repr(self)
 
 class Rocket:
     """
@@ -246,6 +246,14 @@ class Rocket:
 
     """
 
+    # Eventually, toggle CGI or WSGI
+    def body_getargs_wsgi(self):
+        if self.method == "POST":
+	        return  parse_qs(self.env['wsgi.input'].read(int(self.env['CONTENT_LENGTH'])))
+        else:
+            return {None: '(no body)'}
+
+
     def __init__(self, env, start_res):
         self.env   = env
         self._start_res = start_res
@@ -255,15 +263,14 @@ class Rocket:
         self._msg       = "(silence)"
         self._headers   = []
         self._format    = lambda x: x
-        # Eventually, toggle CGI or WSGI
-        self._raw_body  = lambda self: parse_qs(self.env.get('wsgi.input').read())
+        self.body_getargs = self.body_getargs_wsgi
+        
 
-
-    def __repr__(self, s=''):
-        return f'Rocket({self.method},{s} {self.path_info},{s}{self.queries},{s}{str(self.headers)},{s}{self._msg},{s}{str(self.session)})'
+    def __repr__(self):
+        return f'Rocket({self.method},{self.path_info},{self.queries},{str(self._headers)},{self._msg},{str(self.session)},{self.body_getargs()})'
 
     def __str__(self):
-        return repr(self, s=' ')
+        return repr(self)
 
 
     def msg(self, msg):
@@ -275,9 +282,12 @@ class Rocket:
         if self.session:
             return ['UML', 'LFX'][db.usr_getif_lfx_username(username) is not None]
 
+    def len_body(self):
+        return int(self.env.get('CONTENT_LENGTH', "0"))
+
     @property
     def method(self):
-        return ['GET', 'POST'][int(self.env.get('CONTENT_LENGTH', "0")) > 0]
+        return ['GET', 'POST'][self.len_body() > 0]
 
 
     # when we use a session, check if the user supplied a token for
@@ -303,9 +313,10 @@ class Rocket:
     # Attempt login using urelencoded credentials from request boy
     # or directly attempt login
     def launch(self, username='', password=''):
+        print("LAUNCH", self, file=sys.stderr)
         new_ses = None
         if self.method == "POST":
-            urldecode = lambda key: html.escape(decode(self.queries.get(encode(key), [b''])[0]))
+            urldecode = lambda key: html.escape(decode(self.body_getargs().get(encode(key), [b''])[0]))
             username = urldecode('username')
             password = urldecode('password')
         if (pwdhash := db.usr_pwdhashfor_username(username)) and \
@@ -425,7 +436,7 @@ form_login="""
 		<label for="username">Username:<br /></label>
 		<input name="username" type="text" id="username" />
 	<br />
-		<label for="password">Password:<br /></label*
+		<label for="password">Password:<br /></label>
 		<input name="password" type="password" id="password" />
 	<br />
 		<button type="submit">Submit</button>
@@ -557,6 +568,10 @@ def handle_try_md(rocket):
 
 def application(env, SR):
     rocket = Rocket(env, SR)
+
+    if rocket.method == "POST":
+        print(parse_qs(env['wsgi.input'].read(int(env['CONTENT_LENGTH']))), file=sys.stderr)
+
     if re.match("^(/login|/check|/logout/|/mail_auth)", rocket.path_info):
         return handle_login(rocket)
     elif re.match("^/dashboard", rocket.path_info):
