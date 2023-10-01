@@ -5,14 +5,22 @@ import config
 # ASN => assignments
 # SUB => submissions
 # REG => newusers
+import sys
 
 def _do(cmd, set_=False, get_=False):
+    if config.sql_verbose:
+        print("SQL", cmd, file=sys.stderr)
     dat = None
     con = sqlite3.connect(config.database)
     new = con.cursor()
     ret = new.execute(cmd)
     if get_:
         dat = ret.fetchall()
+        if len(dat) < 1:
+            dat = [None]
+        if config.sql_verbose:
+            print("SQLRET", dat, file=sys.stderr)
+        # works when get lookup fails
     if set_:
         ret.execute("COMMIT;")
     con.close()

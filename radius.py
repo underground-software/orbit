@@ -4,8 +4,8 @@
 
 from http import HTTPStatus, cookies
 import markdown, os, re
-import sys, datetime, bcrypt, hashlib
-from datetime import datetime
+import sys, bcrypt, hashlib
+from datetime import datetime, timedelta
 from urllib.parse import parse_qs
 import sqlite3, html
 import config as cfg
@@ -77,13 +77,13 @@ mk_div  = lambda         s, c, i=0: mk_tblock(_divfmt.format(s), c, "</div>")
 
 
 # pass h=1 for table header
-mk_td   = lambda    c, s, h=0, i=0: mk_dubtag('t{["d","h"][h]}', c, s, i)
+mk_td   = lambda    c, s, h=0, i=0: mk_dubtag(f't{["d","h"][h]}', c, s, i)
 
-_trhelp = lambda         l, s, i=0: '\n'.join([mk_td(_tr, s, h, i) for _tr in l])
+_trhelp = lambda      l, s, h, i=0: '\n'.join([mk_td(_td, s, h, i) for _td in l])
 mk_tr   = lambda      l, s, h, i=0: mk_tblock("<tr>", _trhelp(l, s, h, i+1), "</tr>", i)
 
-_tbhelp = lambda         l, s, i=0: '\n'.join([mk_tr(_td, s, j == 0, i) for _tr, j in enumerate(l)])
-mk_tbl  = lambda         l, s, i=0: mk_tblock("<table>", _tbhelp(l, s, i), "</table>")
+_tbhelp = lambda         l, s, i=0: '\n'.join([mk_tr(_tr, s, j == 0, i) for j, _tr  in enumerate(l)])
+mk_tbl  = lambda    l, s=cdfl, i=0: mk_tblock("<table>", _tbhelp(l, s, i), "</table>")
 
 # compound HTML makers
 mk_sep    = lambda         i=0: mk_t(f'<hr />', i)
@@ -139,48 +139,52 @@ class Session:
         Current session's expiration as unix timestamp
 
     """
-    # initialize session from username and add new record
-    def __init__(self, username):
-        self.username   = username
-        self.token      = self.mk_hash()
-        self._expiry    = datetime.now()
-        db.ses_ins(self.token, self.username, self._expiry)
-
     # attempt to continue existing session using a token or query
-    def __init__(self, env, queries):
+    def __init__(self, env=None, queries=None, username=None):
         self.token      = None
         self.username   = None
-        self.token      = None
+        self.expiry     = None
 
-        # query overrides cookie
-        if (tok := queries.get('token', None)):
-            pass
-        elif (raw := env.get("HTTP_COOKIE")):
-            cok = cookies.BaseCookie('')
-            cok.load(raw)
-            tok = cok.get('auth', None)
 
-        if (ses_found := db.ses_getby_token(tok)):
-            self.token      = ses_found[0]
-            self.username   = ses_found[1]
-            self.expiry     = ses_found[2]
+    # initialize session from username and add new record
+        if username:
+            self.username   = username
+            self.token      = self.mk_hash(username)
+            self.expiry     = datetime.utcnow() + timedelta(minutes=min_per_ses)
+            if db.ses_getby_username(username):
+                db.ses_delby_username(username)
+            db.ses_ins((self.token, self.username, self.expiry_ts()))
+        else:
+            print("HTTP COOKIE:", env.get("HTTP_COOKIE", "asdfasdf"))
+            # query overrides cookie
+            if (res := queries.get('token', None)):
+                pass
+            elif (raw := env.get("HTTP_COOKIE", None)):
+                print("RAWWW", raw)
+                cok = cookies.BaseCookie('')
+                cok.load(raw)
+                res  = cok.get('auth', cookies.Morsel()).value
+            if (ses_found := db.ses_getby_token(res)[0]):
+                self.token      = ses_found[0]
+                self.username   = ses_found[1]
+                self.expiry     = datetime.fromtimestamp(ses_found[2])
 
     def extend(self):
         if self.valid():
             db.ses_setexpiry((gen_tok_expiry(), self.token))
 
     def end(self):
-        return db.ses_delby(self.token)
+        return db.ses_delby_token(self.token)
 
     def valid(self):
         return self.token and not self.expired()
 
-    def mk_hash(self):
+    def mk_hash(self, username):
         hash_input = username + str(datetime.now())
-        return hashlib.sha256(_gen_hsh_inp(username)).hexdigest()
+        return hashlib.sha256(encode(hash_input)).hexdigest()
 
     def expired(self):
-        if (expiry := self.expiry) is None or datetime.utcnow().timestamp() > expiry:
+        if (expiry := self.expiry) is None or datetime.utcnow() > expiry:
             db.ses_delby_token(self.token)
             return True
         else:
@@ -193,15 +197,12 @@ class Session:
         return self.expiry.timestamp()
 
     def mk_cookie_header(self):
+        print("MAKE COOKIE HEADER", self.token)
         if self.token is None:
-            return []
+            return [('Set-Cookie', '')]
         cookie_fmt = 'auth={}; Expires={}; Max-Age={}; Path=/'
-        expiry_fmt = '%a, %d %b %Y %H:%M:%S GMT'
-        now = datetime.utcnow()
-
-        expiry = now + datetime.timedelta(minutes=min_per_ses)
         max_age = sec_per_min * min_per_ses
-        cookie_val = cookie_fmt.format(self.token, expiry, max_age)
+        cookie_val = cookie_fmt.format(self.token, self.expiry_fmt(), max_age)
 
         return  [('Set-Cookie', cookie_val)]
 
@@ -247,9 +248,9 @@ class Rocket:
     """
 
     # Eventually, toggle CGI or WSGI
-    def body_getargs_wsgi(self):
+    def read_body_args_wsgi(self):
         if self.method == "POST":
-	        return  parse_qs(self.env['wsgi.input'].read(int(self.env['CONTENT_LENGTH'])))
+	        return  parse_qs(self.env['wsgi.input'].read(self.len_body()))
         else:
             return {None: '(no body)'}
 
@@ -263,11 +264,10 @@ class Rocket:
         self._msg       = "(silence)"
         self._headers   = []
         self._format    = lambda x: x
-        self.body_getargs = self.body_getargs_wsgi
-        
+        self.body_args  = self.read_body_args_wsgi()
 
     def __repr__(self):
-        return f'Rocket({self.method},{self.path_info},{self.queries},{str(self._headers)},{self._msg},{str(self.session)},{self.body_getargs()})'
+        return f'Rocket({self.method},{self.path_info},{self.queries},{str(self._headers)},{self._msg},{str(self.session)},{self.body_args})'
 
     def __str__(self):
         return repr(self)
@@ -287,15 +287,16 @@ class Rocket:
 
     @property
     def method(self):
-        return ['GET', 'POST'][self.len_body() > 0]
+        return self.env.get('REQUEST_METHOD', "GET")
 
 
     # when we use a session, check if the user supplied a token for
     # an existing session and act quietly load it if so
+    # we don't do it in __init__ since that runs for public pages
     @property
     def session(self):
         if self._session is None:
-                self._session = Session(self.env, self.queries)
+            self._session = Session(env=self.env, queries=self.queries)
         return self._session if self._session.valid() else None
 
     @property
@@ -313,31 +314,30 @@ class Rocket:
     # Attempt login using urelencoded credentials from request boy
     # or directly attempt login
     def launch(self, username='', password=''):
-        print("LAUNCH", self, file=sys.stderr)
         new_ses = None
         if self.method == "POST":
-            urldecode = lambda key: html.escape(decode(self.body_getargs().get(encode(key), [b''])[0]))
+            urldecode = lambda key: html.escape(decode(self.body_args.get(encode(key), [b''])[0]))
             username = urldecode('username')
             password = urldecode('password')
-        if (pwdhash := db.usr_pwdhashfor_username(username)) and \
-            bcrypt.checkpw(encode(password), encode(pwdhash)):
-                new_ses = Session(username=username)
-        if new_ses:
-            self._headers += hdfor_cookie(self.token)
-            self._session = new_ses
-        return self.session
+            if (pwdhash := db.usr_pwdhashfor_username(username)) and \
+                bcrypt.checkpw(encode(password), encode(pwdhash[0][0])):
+                    new_ses = Session(username=username)
+            if new_ses:
+                self._session = new_ses
+                self._headers += self._session.mk_cookie_header()
+            return self.session
 
     # Renew current sesssion and set user auth cookie accordingly
     def refuel(self):
         if self.session:
             self._session.extend()
-            self._headers += hdfor_cookie(self.token)
+            self._headers += self._session.mk_cookie_header()
         return self.session
 
     # Logout of current session and clear user auth cookie
     def retire(self):
-        self._headers += hrdfor_cookie('auth', '')
-        return self._session.end()
+        self._session.end()
+        self._headers += self._session.mk_cookie_header()
 
     # Set appropriate headers
     def parse_content_type(self, content_type):
@@ -377,9 +377,10 @@ class Rocket:
         # Prepare footer
         msgdoc  = []
         msgdoc += [(    'msg', self._msg)]
-        msgdoc += [( 'whoami', cfg.whoami)]
+        msgdoc += [('whoami', self.username)]
+        msgdoc += [('appname', cfg.appname)]
         msgdoc += [('version', cfg.version)]
-        msgdoc += [( 'source', cfg.source)]
+        msgdoc += [('source', cfg.source)]
         # Concatenate all components to complete this format operation
         output = ''
         output += mk_style()
@@ -421,15 +422,10 @@ form_welcome_template="""
 """.strip()
 
 form_welcome_buttons="""
-	<form id="logout" method="get" action="/login">
-		<input type="hidden" name="logout" value="true">
-		<button type="submit" class="logout">Logout</button>
-	</form>
-	<form id="renew" method="get" action="/login">
-		<input type="hidden" name="renew" value="true">
-		<button type="submit" class="renew">Renew</button>
-	</form>
-"""
+    <form id="logout">
+    <input class="logout" type="button" onclick="location.href='/logout';" value="Logout" />
+    </form>
+""".strip()
 
 form_login="""
 	<form id="login" method="post" action="/login">
@@ -441,6 +437,12 @@ form_login="""
 	<br />
 		<button type="submit">Submit</button>
 	</form>
+""".strip()
+
+form_logout="""
+<head>
+  <meta http-equiv="Refresh" content="0; URL=/login" />
+</head>
 """
 
 def cookie_info_table(session):
@@ -452,7 +454,7 @@ def cookie_info_table(session):
         ('Remaining Validity', str(session.expiry - datetime.utcnow()))])
 
 def mk_form_welcome(session):
-    return form_welcome_template.format(cookie_info_table(session), logout_buttons())
+    return form_welcome_template.format(cookie_info_table(session), form_welcome_buttons)
 
 form_register="""
     		<form id="register" method="post" action="/register">
@@ -462,28 +464,16 @@ form_register="""
             </form>
 """.strip()
 
-def handle_welcome(rocket):
-    makeme = mk_form_welcome()
-    match rocket.queries:
-        case ('logout', 'true'):
-            rocket.retire()
-            rocket.msg(f'{rocket.username} logout')
-            makeme = lambda: form_login
-        case ('renew', 'true'):
-            rocket.refuel()
-            rocket.msg(f'{rocket.username} renew')
-        case _:
-            rocket.msg(f'{rocket.username} authenticated by token')
-    return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
-
 def handle_login(rocket):
-    if rocket.session:
-        return handle_welcome()
     makeme = lambda: form_login
-    if  rocket.method == "POST":
+    if rocket.session:
+        makeme = lambda : mk_form_welcome(rocket.session)
+        rocket.msg(f'{rocket.username} authenticated by token')
+        return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
+    if rocket.method == "POST":
         if rocket.launch():
             rocket.msg(f'{rocket.username} authenticated by password')
-            makeme = mk_form_welcome()
+            makeme = lambda: mk_form_welcome(rocket.session)
         else:
             rocket.msg(f'authentication failure')
     else:
@@ -510,17 +500,11 @@ def handle_mail_auth(rocket):
 
     return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
 
-def handle_check(rocket):
-    if rocket.token_from_query() and rocket.session:
-        return rocket.respond(HTTPStatus.OK, 'text/plain', session.username)
-    else:
-        return rocket.respond(HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS, 'text/plain', 'null')
 
 def handle_logout(rocket):
-    if rocket.queryget('username') and self.session:
-        return rocket.respond(HTTPStatus.OK, 'text/plain', rocket.retire(self.username))
-    else:
-        return rocket.respond(HTTPStatus.UNAVAILABLE_FOR_LEGAL_REASONS, 'text/plain', 'null')
+    if rocket.session:
+        rocket.retire()
+    return rocket.respond(HTTPStatus.OK, 'text/html', form_logout)
 
 def handle_dashboard(rocket):
     return rocket.respond(HTTPStatus.OK, 'text/html', dash.dash(rocket.user))
@@ -568,12 +552,12 @@ def handle_try_md(rocket):
 
 def application(env, SR):
     rocket = Rocket(env, SR)
-
-    if rocket.method == "POST":
-        print(parse_qs(env['wsgi.input'].read(int(env['CONTENT_LENGTH']))), file=sys.stderr)
-
-    if re.match("^(/login|/check|/logout/|/mail_auth)", rocket.path_info):
-        return handle_login(rocket)
+    if re.match("^/login", rocket.path_info):
+        return handle_login(rocket)   
+    elif re.match("^/logout", rocket.path_info):
+        return handle_logout(rocket)   
+    elif re.match("^/mail_auth", rocket.path_info):
+        return handle_mail_auth(rocket)
     elif re.match("^/dashboard", rocket.path_info):
         return handle_dashboard(rocket)
     elif re.match("^/register", rocket.path_info):

@@ -95,11 +95,11 @@ do_validate_credentials() {
 	need_credentials_or_die
 
 	CMD="SELECT pwdhash FROM users WHERE username = '${USER}';"
-	Echo "Running sqlite command on $(basename "${DB_USERS}"): '${CMD}'"
+	Echo "Running sqlite command on $(basename "${DB}"): '${CMD}'"
 
-	HASH=`sqlite3 "${DB_USERS}" "${CMD}"`
+	HASH=`sqlite3 "${DB}" "${CMD}"`
 
-	Echo "Hash from $(basename "${DB_USERS}"): '${HASH}'"
+	Echo "Hash from $(basename "${DB}"): '${HASH}'"
 
 	# if $HASH is empty,
 	# then $USER does not exist
@@ -126,9 +126,9 @@ EOF
 }
 
 do_list_sessions() {
-	CMD="SELECT token, user, expiry FROM sessions;"
-	Echo "Running sqlite command on $(basename "${DB_SESSIONS}") '${CMD}'"
-	OUT=`sqlite3 "${DB_SESSIONS}" "${CMD}"`
+	CMD="SELECT token, username, expiry FROM sessions;"
+	Echo "Running sqlite command on $(basename "${DB}") '${CMD}'"
+	OUT=`sqlite3 "${DB}" "${CMD}"`
 	echo -e "${OUT}"
 }
 
@@ -157,9 +157,9 @@ do_new_user() {
 
 	CMD="INSERT INTO users (username, pwdhash, lfx) VALUES ('${USER}', '${PWDHASH}', false);"
 
-	Echo "Running sqlite command on $(basename "${DB_USERS}") '${CMD}'"
+	Echo "Running sqlite command on $(basename "${DB}") '${CMD}'"
 
-	if sqlite3 "${DB_USERS}" "${CMD}" 2>& 1 | grep "UNIQUE constraint failed" > /dev/null; then
+	if sqlite3 "${DB}" "${CMD}" 2>& 1 | grep "UNIQUE constraint failed" > /dev/null; then
 		die "username '${USER}' taken"
 	fi
 
@@ -189,9 +189,9 @@ do_delete_user() {
 
 	CMD="DELETE FROM users WHERE username = '${USER}';"
 
-	Echo "Running sqlite command on $(basename "${DB_USERS}") '${CMD}'"
+	Echo "Running sqlite command on $(basename "${DB}") '${CMD}'"
 
-	if ! sqlite3 "${DB_USERS}" "${CMD}"; then
+	if ! sqlite3 "${DB}" "${CMD}"; then
 		die "failed to delete user '${USER}'"
 	fi
 
@@ -202,7 +202,7 @@ do_existence_check_user() {
 	need_username_or_die
 
 	CMD="SELECT pwdhash FROM users WHERE username = '${USER}';"
-	PWDHASH=$(sqlite3 "${DB_USERS}" "${CMD}")
+	PWDHASH=$(sqlite3 "${DB}" "${CMD}")
 
 	# if we lookup a password in the database for $USER and find nothing
 	# then the user does not exist
@@ -218,8 +218,8 @@ do_existence_check_user() {
 
 do_list_roster_users() {
 	CMD="SELECT id, username, pwdhash, lfx FROM users;"
-	Echo "Running sqlite command on $(basename "${DB_USERS}"): '${CMD}'"
-	OUT=`sqlite3 "${DB_USERS}" "${CMD}"`
+	Echo "Running sqlite command on $(basename "${DB}"): '${CMD}'"
+	OUT=`sqlite3 "${DB}" "${CMD}"`
 	echo -e "${OUT}"
 	
 }
@@ -235,8 +235,8 @@ do_mutate_pwdhash_user() {
 	PWDHASH=$(do_hash_password)
 
 	CMD="UPDATE users SET pwdhash = '${PWDHASH}' WHERE username = '${USER}'"
-	Echo "Running sqlite command on $(basename "${DB_USERS}"): '${CMD}'"
-	sqlite3 "${DB_USERS}" "${CMD}"
+	Echo "Running sqlite command on $(basename "${DB}"): '${CMD}'"
+	sqlite3 "${DB}" "${CMD}"
 
 	echo "credentials = { username: ${USER}, password: ${PASS} }"
 }
@@ -252,8 +252,8 @@ do_make_lfx_user() {
 	PWDHASH=$(do_hash_password)
 
 	CMD="UPDATE users SET lfx = TRUE WHERE username = '${USER}'"
-	Echo "Running sqlite command on $(basename "${DB_USERS}"): '${CMD}'"
-	sqlite3 "${DB_USERS}" "${CMD}"
+	Echo "Running sqlite command on $(basename "${DB}"): '${CMD}'"
+	sqlite3 "${DB}" "${CMD}"
 
 	echo "credentials = { username: ${USER}, lfx: true }"
 }
@@ -278,7 +278,7 @@ TOKEN=
 # default naked invocation to list all known sessions
 OP="list_sessions"
 # all one thing, testing TODO
-AUTH_SERVER=${ALT_AUTH_SERVER:-localhost:9098)}
+AUTH_SERVER=${ALT_AUTH_SERVER:-localhost:9098}
 VERBOSE='no'
 
 while getopts "f:sminawehdblcvru:p:t:" X; do
@@ -341,8 +341,7 @@ shift $(($OPTIND - 1))
 # We need to make sure all database calls are local to this repo
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-DB_USERS="${SCRIPT_DIR}/${ALT_DB_USERS:-orbit.db}"
-DB_SESSIONS="${SCRIPT_DIR}/${ALT_DB_SESSIONS:-sessions.db}"
+DB="${SCRIPT_DIR}/${ALT_DB:-orbit.db}"
 
 
 Echo "ExecutionConfig = {"
@@ -350,8 +349,7 @@ Echo "\toperation: '${OP}'"
 Echo "\tusername: '${USER}'"
 Echo "\tpassword: '${PASS}'"
 Echo "\ttoken: '${TOKEN}'"
-Echo "\tdb_users: '${DB_USERS}'"
-Echo "\tdb_sessions: '${DB_SESSIONS}'"
+Echo "\tdb: '${DB}'"
 Echo "}"
 
 do_${OP}
