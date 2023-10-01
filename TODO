@@ -1,15 +1,43 @@
-Feature 	Implementation
+Feature 	Implementation	Status
 
-email		pop3/smtp
-md2html		radius
-auth		radius
-autograder	ata
-deploy		big.bang
+email		pop3/smtp	done
+md2html		radius		done
+auth		radius		doing
+dash		radius		todo
+deploy		big.bang	todo
+autograder	ata		todo
+
+Orbit data needs to db tables mapping:
+
+Users (
+	id integer primary key,
+	username string UNIQUE NOT NULL,
+	pwdhash string NOT NULL,
+	lfx boolean NOT NULL,
+	student_id integer
+
+tblnick (database table nickname) defs:
+USR := student/mentee username 	(Orbit ID)
+SES := session token 		(Orbit Session)
+ASN := assignment for course	(EX/PX/FX)
+SUB := unique asn submission	(homework)
+REG := temp registration entry
+
+tblnick	Purpose 	Access Ctrl
+USR	usr => pwdhash	public-ish (rate limit)
+SES	tok => usr/null	radius only
+SUB	usr => [subs]	per-student
+ASN	asn => course	public
+REG	usr 1=> creds	once per-student
+
+TODO when working:
+- reconsider registration
+- 
 
 
 Secure data:
 - email storage configured by big.bang imported from webservers dev
-- tables in consolidated database, start with orbit.db
+- tables in consolidated database, start with orbit.db as basic solution
 (these can go in /var/orbit/<name> now I suppose)
 
 random idea storage:
@@ -33,8 +61,6 @@ orbit
 │   ├── prod.hostname
 │   ├── README.md
 │   ├── restore_from_backup.sh
-│   └── restore_from_remote.sh
-├── big.bang
 ├── config.py
 ├── db.default
 ├── dnf.deps

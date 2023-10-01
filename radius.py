@@ -9,135 +9,99 @@ from datetime import datetime
 from urllib.parse import parse_qs
 import sqlite3, html
 import config as cfg
+import db
 
-def make_h(v, c, cls='', attrs=''):
-    return f'<h{v} class="{cls}" {attrs} >{c}</h{v}>'
-
-def make_t_i(i):
-    return ''.join(['\t' for x in range(i)])
-
-def make_o(i, c):
-    return f'{make_t_i(i)}{c}\n'
-
-def make_ooo(i, c, d, e, j=0):
-    return f'{make_o(i, c)}{make_o(i+j, d)}{make_o(i, e)}'
-
-def make_oOo(i, c, d, e):
-    return make_ooo(i, c, d, e, j=1)
-
-def make_oxo(i, c, d, e):
-    return f'{make_o(i, c)}{d}{make_o(i, e)}'
-
-def make_table_data(c, h=False, i=0):
-    d = 'd'
-    if h:
-        d = 'h'
-    a, b = f'<t{d}>', f'</t{d}>'
-    return make_oOo(i, a, c, b)
-
-def make_table_row(c, h=False, i=0):
-    d = ''.join([table_data(d, h=h, i=i+1) for d in c])
-    return make_oxo(i, '<tr>', d, '</tr>')
-
-def make_table(c, i=0):
-    t=''
-    h=True
-    for r in c:
-        t += table_row(r, h, i=i+1)
-        h=False
-    return make_oxo(i, '<table>', t, '</table>')
-
-def make_img(src, alt='', cls='', attrs=''):
-    return f'<img src="{src}" alt="{alt}" class="{cls}" {attrs} />'
-
-def make_div(cls, c="", i=0):
-    return make_oxo(i, f'<div class="{cls}">', c, '</div>')
-
-def make_code(attr="", c="", i=0):
-    return make_oxo(i, f'<code {attr} >', c, '</code>')
-
-def make_li(c):
-    return o(c)
-
-def make_ul(c, i=0):
-    return oxo(i, f'<ul>', '\n'.join([li(_li) for _li in c]), '</ul>')
-
-def make_a(text, href, attrs=''):
-    return f'<a {attrs} href="{href}">{text}</a>'
-
-def make_nav_button(href, text):
-    return make_a(href, text, attrs=' class="nav" ')
-
-def make_button(c, i=0, a=''):
-    return make_oOo(i, f'<button {a}>', c, '</button>')
-
-def make_input_(attr=''):
-    return f'<input {attr} >'
-
-def make_label(attr='', c=''):
-    return f'<label {attr} >{c}</label>'
-
-encode  = lambda dat: bytes(dat, "UTF-8")
-decode  = lambda dat: str(dat, "UTF-8")
-
-# Constants
 sec_per_min = 60
-min_per_ses = 180
-
-# === auth cookie implementation === 
-
-# Under the assumption of the impossibility of two invocations of this function
-# with equivalent values calclated from the 'username + str(datetime.now())' expression,
-# this function guarantees unique session tokens for every successful login by $userame
-_gen_hsh_inp = lambda username: (username + str(datetime.now()))
-_gen_tok_hsh = lambda username: hashlib.sha256(_gen_hsh_inp(username)).hexdigest()
-
-# Generate the expiration datetime pair from the value loaded from orbcfguration
-# The first elenent is the dateime processed through a stanard formatstring
-# The second element is number of seconds until the expiration datetime
-_fmt_cok_tme = '%a, %d %b %Y %H:%M:%S GMT'
-_gen_exp_now = lambda: datetime.utcnow() + datetime.timedelta(minutes=min_per_ses)
-_gen_cok_tme = lambda: (gen_exp_now().strftime(fmt_cok_tme), sec_per_min * min_per_ses)
-
-# Generate the information we need to set a user cookie for entire website on this domain.
-# With a supplied session token set as the value, generate a semicolon-separated list
-# of key=value pairs that will be remembered by the user
-# The value of path could be adjusted to restrict the set of pages the user's web client
-# to a subdomain of the server root.
-_fmt_cok_val = 'auth={}; Expires={}; Max-Age={}; Path=/'
-_gen_cok_val = lambda cok_val : fmt_cok_val.format(value, *gen_cok_tme())
-_gen_cok_hdr = lambda cok_dat : [('Set-Cookie', gen_cok_val(cok_dat))]
-hdfor_cookie= _gen_cok_hdr
-hdfor_cookie.__doc__="""
-    hdfor_cookie: generate the date set auth cookie via header
-    [args]
-        token : string
-        |   valid session token to use as auth value
-    [return]
-        | header text
-    """.strip()
-
-def parse_cookie(raw):
-    """
-    pars_cookie: attempt to parse an auth cookie from raw data
-    [args]
-        raw : string
-        |   attempt to parse this string formatted cookie data
-    [return]
-        | token hash value if a cookie was parsed successfully
-        | None otherwise
-    """
-    cok = cookies.BaseCookie('')
-    cok.load(raw)
-    return cok.get('auth', None)
+min_per_ses = cfg.ses_mins
 
 
+# utilities
 
-# === user sessionimplementation === 
+encode    = lambda dat: bytes(dat, "UTF-8")
+decode    = lambda dat: str(dat, "UTF-8")
+
+# HTML helpers
+
+# shorthand key:
+# c := content within the tag
+# s := tag class
+# h := href or src link
+# i := indentation level
+# a := full attribute string
+# l := list to insert between subtags
+
+# indent string c with i tabs and append newline
+mk_t      = lambda c, i=0    : '\t'*i + f'{c}\n'
+#def mk_t(c, i=0):
+    #print("mk_t", i, c, file=sys.stderr)
+    #return '\t'*i + f'{c}<br />'
+
+
+# generalized attribute inserters
+mk_dtattr = lambda t, c, a='', i=0: mk_t(f'<{t}{a}>{c}</{t}>', i)
+mk_otattr = lambda t, a='', i=0: mk_t(f'<{t}{a} />', i)
+
+
+# fallback class for generated HTML
+cdfl = 'radius_default'
+
+# for simple usage, take just the class
+mk_dubtag = lambda t, c, s=cdfl, i=0: mk_dtattr(t, c, f' class="{s}"', i=i)
+
+# no conent so just take tag and class
+mk_onetag = lambda t, s=cdfl, i=0: mk_t(f'<{t} class="{s}" />', i=i)
+
+# direct HTML tag makers
+mk_h    = lambda v, c, s=cdfl, i=0: mk_dubtag("h" + str(v), c, s, i)
+mk_li   = lambda            c, i=0: mk_dubtag("li", c, i)
+_lihelp = lambda            l, i=0: '\n'.join([mk_li(_li, i) for _li in k])
+
+# for blocks with indented content in  a\n\t\b\c form
+_3linefmt = '{}\n{}\n{}'
+mk_tblock = lambda a, b, c, i=0: _3linefmt.format(mk_t(a, i), mk_t(b, i+1), mk_t(c, i))
+
+mk_ul   = lambda            l, i=0: mk_tblock("<ul>", _lihelp(l, i+1), "</ul>", i)
+
+
+_afmt = ' href="{}" class="{}"'
+mk_a    = lambda h, t, s=cdfl, i=0: mk_dtattr("a", t, _afmt.format(h, s), i)
+mk_code = lambda    c, s=cdfl, i=0: mk_dubtag("code", c, s, i)
+
+# x used for alt text attribute value
+_imgfmt = ' src="{}" class="{}" alt="{}"'
+mk_img  = lambda h, x, s=cdfl, i=0: mk_otattr("img", _imgfmt.format(h, s, x) , i)
+
+# no default class for div: it's required as the first argument
+_divfmt = '<div class="{}">'
+mk_div  = lambda         s, c, i=0: mk_tblock(_divfmt.format(s), c, "</div>")
+
+
+# pass h=1 for table header
+mk_td   = lambda    c, s, h=0, i=0: mk_dubtag('t{["d","h"][h]}', c, s, i)
+
+_trhelp = lambda         l, s, i=0: '\n'.join([mk_td(_tr, s, h, i) for _tr in l])
+mk_tr   = lambda      l, s, h, i=0: mk_tblock("<tr>", _trhelp(l, s, h, i+1), "</tr>", i)
+
+_tbhelp = lambda         l, s, i=0: '\n'.join([mk_tr(_td, s, j == 0, i) for _tr, j in enumerate(l)])
+mk_tbl  = lambda         l, s, i=0: mk_tblock("<table>", _tbhelp(l, s, i), "</table>")
+
+# compound HTML makers
+mk_sep    = lambda         i=0: mk_t(f'<hr />', i)
+mk_chrset = lambda         i=0: mk_t('<meta charset="UTF-8">', i)
+mk_msgfmt = lambda     kv, i=0: mk_code(('{} = {} <br />').format(*kv), i)
+mk_msgblk = lambda b, kvs, i=0: b + ''.join([mk_msgfmt(kv, i) for kv in kvs]) + b
+_stylefmt = '<link rel="stylesheet" type="text/css" href="{}"/>'
+mk_style  = lambda         i=0: mk_t(_stylefmt.format(cfg.style_get), i)
+mk_navbt  =  lambda  h, t, i=0: mk_a(t, h, 'nav')
+
+# === user session handling === 
 
 class Session:
     """
-    Session: User session data
+    Session: User session management assuming authentication handled by caller
+             Manages the sessions db table
+             construct with username to create a new session
+             construct with environment and queries to try load existing session
 
     ...
 
@@ -145,19 +109,25 @@ class Session:
     ----------
     
     username : string
-        A valid username for user session or '' if unauthenticated
+        The authenticated  username if self.valid()
+        None otherwise
 
     token : string
-        A valid token for user session or '' if unauthenticated
+        A valid token for user session if self.valid()
+        None otherwise
 
     expiry : datetime.datetime
-        Current session's expiration as datetime or None if unauthenticated
+        The current session expiration date  if self.valid()
+        None otherwise
 
-    remaining_validity : datetime.timedelta
-        Time left until session expiry
 
     Methods
     -------
+    valid()
+        Get truth of whether this session is valid at time of call
+
+    extend()
+        If the session is valid, reset expiry to $mins_per_ses
 
     expired()
         Get truth of whether this $self.expiry is in the past
@@ -165,125 +135,86 @@ class Session:
     expiry_fmt()
         Get a printable, formatted string of $self.expiry
 
+    expiry_dt() : datetime.datetime
+        Current session's expiration as unix timestamp
+
     """
-    def __init__(self, token=None, username=None, expiry=None):
-        self.token = token
-        self.username = username
-        self._expiry = None
-        if expiry is not None:
-            self._expiry = datetime.fromtimestamp(expiry)
+    # initialize session from username and add new record
+    def __init__(self, username):
+        self.username   = username
+        self.token      = self.mk_hash()
+        self._expiry    = datetime.now()
+        db.ses_ins(self.token, self.username, self._expiry)
+
+    # attempt to continue existing session using a token or query
+    def __init__(self, env, queries):
+        self.token      = None
+        self.username   = None
+        self.token      = None
+
+        # query overrides cookie
+        if (tok := queries.get('token', None)):
+            pass
+        elif (raw := env.get("HTTP_COOKIE")):
+            cok = cookies.BaseCookie('')
+            cok.load(raw)
+            tok = cok.get('auth', None)
+
+        if (ses_found := db.ses_getby_token(tok)):
+            self.token      = ses_found[0]
+            self.username   = ses_found[1]
+            self.expiry     = ses_found[2]
+
+    def extend(self):
+        if self.valid():
+            db.ses_setexpiry((gen_tok_expiry(), self.token))
+
+    def end(self):
+        return db.ses_delby(self.token)
+
+    def valid(self):
+        return self.token and not self.expired()
+
+    def mk_hash(self):
+        hash_input = username + str(datetime.now())
+        return hashlib.sha256(_gen_hsh_inp(username)).hexdigest()
 
     def expired(self):
-        if expiry := self.expiry is None or datetime.utcnow().timestamp() > expiry:
-            del_by_token(self.token)
+        if (expiry := self.expiry) is None or datetime.utcnow().timestamp() > expiry:
+            db.ses_delby_token(self.token)
             return True
         else:
             return False
 
     def expiry_fmt(self):
-        return self._expiry.strftime('%a, %d %b %Y %H:%M:%S GMT')
+        return self.expiry.strftime('%a, %d %b %Y %H:%M:%S GMT')
 
-    @property
-    def expiry(self):
-        return self._expiry.timestamp()
+    def expiry_ts(self):
+        return self.expiry.timestamp()
 
-    @property
-    def remaining_validity(self):
-         return str(self._expiry - datetime.utcnow())
+    def mk_cookie_header(self):
+        if self.token is None:
+            return []
+        cookie_fmt = 'auth={}; Expires={}; Max-Age={}; Path=/'
+        expiry_fmt = '%a, %d %b %Y %H:%M:%S GMT'
+        now = datetime.utcnow()
 
-    def __repr__(self, tab='', nl='', end=''):
-        return ( f'{tab}SES:{nl}'
-                 f'{tab}USR:{tab}{self._msg}{nl}'
-                 f'{tab}TOK:{tab}{self.queries}{nl}'
-                 f'{tab}EXP:{tab}{self.path_info}{nl}'
-                 f'{tab}){end}')
+        expiry = now + datetime.timedelta(minutes=min_per_ses)
+        max_age = sec_per_min * min_per_ses
+        cookie_val = cookie_fmt.format(self.token, expiry, max_age)
+
+        return  [('Set-Cookie', cookie_val)]
+
+    def __repr__(self, sep=''):
+        return f'Session({self.token},{sep}{self.username},{sep}{self.expiry})'
 
     def __str__(self):
-        return repr(self, tab='\t', nl='\n\t', end='\n')
-
-# === user session API === 
-
-def new_by_username(username):
-    """
-    new_by_username: create a new valid session for $username
-        username : str
-        |   assume $username is authentiated by caller and from this value construct a new session
-    [return]
-        | A valid session token for $username if session creation is successfull
-        | None otherwise
-    """
-    if (session := get_by_username(username)):
-        # This should never happen if get, del working
-        if del_by_username(session.token) != 'username':
-            [][0] # Generate an exception
-            
-    return data.usr_ins((get_tok_hsh(username), username), gen_expiry().timestamp())
-
-def del_by_username(username):
-    """
-    del_by_username: delete any extant valid session data for $username
-        username : str
-        |   lookup session for $username
-    [return]
-        | $token if this invocation sucessfully invalidates a corresponding valid session
-        | None otherwise
-    """
-    return data.ses_delby_username(username)
-
-def del_by_token(token):
-    """
-    del_by_token: delete any extant valid session data for $token
-        token  : str
-        |   lookup session for $token
-    [return]
-        | $token if this invocation sucessfully invalidates a corresponding valid session
-        | None otherwise
-    """
-    return data.ses_delby_token(token)
-
-def get_by_username(username):
-    """
-    get_by_username: get any extant valid session data for $username
-        username : str
-        |   lookup any sesion for $username
-    [return]
-        | session validated by $username if extant
-        | None otherwise
-    """
-    return data.ses_getby_username(username)
-
-def get_by_token(token):
-    """
-    get_by_token: get any extant valid session data for $token
-    [args]
-        token : str
-        |   lookup any session for $token
-    [return]
-        | session validated by $token if extant
-        | None otherwise
-    """
-    return data.ses_getby_token(token)
-
-# Password hashing and checking handled by the bcrypt library
-def login(username, password):
-    """
-    login: attempt authentication
-    [args]
-        username : str
-        password : str
-    [return]
-        |   True if successful
-        |   False otherwise
-    """
-    print('login attempt for ', username, password, file=sys.stdout)
-    if (pwdhash := usr_pwdhashfor_username(username)) and \
-              bcrypt.checkpw(encode(password), encode(pwdhash)):
-          return username
+        return repr(self, sep=' ')
 
 class Rocket:
     """
-    Rocket: Radius user request context resposible for
-            ensuring authention is performed correctly
+    Rocket: Radius user request context (responsible for authentication)
+            Limited external read access to users table
 
     ...
 
@@ -299,17 +230,13 @@ class Rocket:
         The current valid session token if it exists or None
 
     username : string
-        The valid current session username or '' if unauthenticated
+        The valid current session username or None if unauthenticated
 
     token : string
-        The valid current session token or '' if unauthenticated
+        The valid current session token or None if unauthenticated
 
     expiry : datetime.datetime
         The current session's expiration time and date or None if unauthenticated
-
-    remaining_validity : dattime.timedelta
-         Time remaining remaining until session expiry
-         return str(self._expiry - datetime.datetime.utcnow())
 
     Methods
     -------
@@ -317,42 +244,27 @@ class Rocket:
     expiry_fmt()
         returns a printable and nicely formatted expiry date and time string
 
-    env_get(self, key):
-        try to get
-
     """
 
-    def __init__(self, environ, start_res, cfg):
-        self._environ   = environ
+    def __init__(self, env, start_res):
+        self.env   = env
         self._start_res = start_res
-        self._path_info = None
-        self._queries   = None
+        self.path_info = self.env.get("PATH_INFO", "/")
+        self.queries   = parse_qs(self.env.get("QUERY_STRING", ""))
         self._session   = None
-        self._user_token = None
         self._msg       = "(silence)"
-        self._db        = cfg.database
         self._headers   = []
         self._format    = lambda x: x
         # Eventually, toggle CGI or WSGI
-        self._raw_body  = lambda self: parse_qs(self.env_get('wsgi.input').read())
+        self._raw_body  = lambda self: parse_qs(self.env.get('wsgi.input').read())
 
 
-    def __repr__(self, tab='', nl='', end=''):
-        return ( f'ROCK ({nl}'
-                 f'COOK:{tab}{self._user_token}{nl}'
-                 f'SESH:{tab}{str(self._session)}{nl}'
-                 f'METH:{tab}{self.method)}{nl}'
-                 f'HEAD:{tab}{self._headers}{nl}'
-                 f'MESG:{tab}{self._msg}{nl}'
-                 f'QURY:{tab}{self._queries}{nl}'
-                 f'PATH:{tab}{self._path_info}{nl}'
-                 f'){end}')
+    def __repr__(self, s=''):
+        return f'Rocket({self.method},{s} {self.path_info},{s}{self.queries},{s}{str(self.headers)},{s}{self._msg},{s}{str(self.session)})'
 
     def __str__(self):
-        return repr(self, tab='\t', nl='\n\t', end='\n')
+        return repr(self, s=' ')
 
-    def env_get(self, key):
-        return self._environ.get(key, '')
 
     def msg(self, msg):
         self._msg = msg
@@ -361,86 +273,60 @@ class Rocket:
     # but this is the place to extend for more general multi-session usage
     def forwho(self):
         if self.session:
-            return ['UML', 'LFX'][usr_getif_lfx_username(username) is not None]
+            return ['UML', 'LFX'][db.usr_getif_lfx_username(username) is not None]
 
     @property
     def method(self):
-        return ['GET', 'POST'][int(self._environ.get('CONTENT_LENGTH', "0")) > 0]
+        return ['GET', 'POST'][int(self.env.get('CONTENT_LENGTH', "0")) > 0]
 
-    @property
-    def path_info(self):
-        if self._path_info is None:
-            self._path_info = self.env_get("PATH_INFO")
-        return self._path_info
 
-    @property
-    def queries(self):
-        if self._queries is None:
-            self._queries = parse_qs(self.env_get("QUERY_STRING"))
-        return self._queries
-
-    def _token_from_cookie(self):
-        if (auth := parse_cookie(self.env_get("HTTP_COOKIE"))):
-            self._user_token = value
-            return self._user_token
-
-    def _token_from_query(self):
-        if token := self.queries.get('token'):
-            self._user_token = token
-            return self._user_token
-
-    def _token_from_user(self):
-        if self._user_token is not None:
-            return self._user_token
-        # token passed as query overrides local cookie
-        if self._token_from_query() or self._token_from_cookie():
-            return self._user_token
-
+    # when we use a session, check if the user supplied a token for
+    # an existing session and act quietly load it if so
     @property
     def session(self):
         if self._session is None:
-            if self._token_from_user():
-                self._session = get_by_token(self._user_token)
-            else:
-                return None
-        return self._session
+                self._session = Session(self.env, self.queries)
+        return self._session if self._session.valid() else None
 
     @property
     def username(self):
-        return self._session.username   if self.session else None
+        return self._session.username   if self._session else None
 
     @property
     def token(self):
-        return self._session.token      if self.session else None
+        return self._session.token      if self._session else None
 
     @property
     def expiry(self):
-        return self._session.expiry     if self.session else None
+        return self._session.expiry     if self._session else None
 
     # Attempt login using urelencoded credentials from request boy
     # or directly attempt login
     def launch(self, username='', password=''):
+        new_ses = None
         if self.method == "POST":
             urldecode = lambda key: html.escape(decode(self.queries.get(encode(key), [b''])[0]))
             username = urldecode('username')
             password = urldecode('password')
-        self._session = login(username, password)
-        if self.token:
+        if (pwdhash := db.usr_pwdhashfor_username(username)) and \
+            bcrypt.checkpw(encode(password), encode(pwdhash)):
+                new_ses = Session(username=username)
+        if new_ses:
             self._headers += hdfor_cookie(self.token)
-        return self.session is not None
+            self._session = new_ses
+        return self.session
 
     # Renew current sesssion and set user auth cookie accordingly
     def refuel(self):
-        del_by_username(self.username)
-        self._session = new_sesion_by_username(self.username)
         if self.session:
-            self._headers += gen_cookie(self.token)
+            self._session.extend()
+            self._headers += hdfor_cookie(self.token)
         return self.session
 
     # Logout of current session and clear user auth cookie
     def retire(self):
-        self._headers += gen_cookie('auth', '')
-        return del_by_username(self.username)
+        self._headers += hrdfor_cookie('auth', '')
+        return self._session.end()
 
     # Set appropriate headers
     def parse_content_type(self, content_type):
@@ -465,40 +351,32 @@ class Rocket:
         # generate a reproduction of the original header without too much abstraction for initial version
 
         # general constants
-        HR      = '<hr />'
-        BR      = '<br />'
-        LINK_STYLE_CSS      = f'<link rel="stylesheet" type="text/css" href="{cfg.style_get}"/>'
-        META_CHARSET_UTF8   = '<meta charset="UTF-8">'
 
         # Prepare logo
         logo_div_doc  = ''
-        logo_div_doc += make_img(cfg.logo_get, '[KDLP] logo', 'kdlp_logo')
-        logo_div_doc += make_h('1', cfg.title, 'title')
-        logo_div_gen  =  lambda: make_div('logo', logo_div_doc)
+        logo_div_doc += mk_img(cfg.logo_get, '[KDLP] logo', 'kdlp_logo')
+        logo_div_doc += mk_h('1', cfg.title, 'title')
+        logo_div_gen  =  lambda: mk_div('logo', logo_div_doc)
 
         # Prepare nav
-        # FIXME: consider putting in config
         nav_kvs = cfg.nav_buttons
-        nav_btn_gen =    lambda: ''.join([make_nav_button(pair[1], pair[0]) for pair in nav_kvs])
-        nav_div_gen =    lambda: f'{HR}\n{make_div("nav", nav_btn_gen())}\n{HR}\n'
+        nav_btn_gen =    lambda: ''.join([mk_navbt(pair[1], pair[0]) for pair in nav_kvs])
+        nav_div_gen =    lambda: f'<hr />{mk_div("nav", nav_btn_gen())}{mk_sep()}\n'
 
         # Prepare footer
-        msg_doc  = []
-        msg_doc += [(    'msg', self._msg)]
-        msg_doc += [( 'whoami', cfg.whoami)]
-        msg_doc += [('version', cfg.version)]
-        msg_doc += [( 'source', cfg.source)]
-        msg_fmt = lambda kv: make_code(attr='', c='{} = {}' + BR).format(*kv)
-        msg_blk = lambda brdr, kvs: brdr + ''.join([msg_fmt(kv) for kv in kvs])
-
+        msgdoc  = []
+        msgdoc += [(    'msg', self._msg)]
+        msgdoc += [( 'whoami', cfg.whoami)]
+        msgdoc += [('version', cfg.version)]
+        msgdoc += [( 'source', cfg.source)]
         # Concatenate all components to complete this format operation
         output = ''
-        output += LINK_STYLE_CSS
-        output += META_CHARSET_UTF8
+        output += mk_style()
+        output += mk_chrset()
         output += logo_div_gen()
         output += nav_div_gen()
         output += doc
-        output += msg_blk(f'{BR}{HR}{BR}',msg_doc)
+        output += mk_msgblk(mk_sep(), msgdoc)
 
         return output
 
@@ -547,7 +425,7 @@ form_login="""
 		<label for="username">Username:<br /></label>
 		<input name="username" type="text" id="username" />
 	<br />
-		<label for="password">Password:<br /></label>
+		<label for="password">Password:<br /></label*
 		<input name="password" type="password" id="password" />
 	<br />
 		<button type="submit">Submit</button>
@@ -555,14 +433,14 @@ form_login="""
 """
 
 def cookie_info_table(session):
-    return table([
+    return mk_tbl([
         ('Cookie Key', 'Value'),
         ('Token', session.token),
         ('User', session.username),
-        ('Expiry', session.expiry_fmt),
-        ('Remaining Validity', session.remaining_validity)])
+        ('Expiry', session.expiry_fmt()),
+        ('Remaining Validity', str(session.expiry - datetime.utcnow()))])
 
-def make_form_welcome(session):
+def mk_form_welcome(session):
     return form_welcome_template.format(cookie_info_table(session), logout_buttons())
 
 form_register="""
@@ -574,7 +452,7 @@ form_register="""
 """.strip()
 
 def handle_welcome(rocket):
-    makeme = make_form_welcome()
+    makeme = mk_form_welcome()
     match rocket.queries:
         case ('logout', 'true'):
             rocket.retire()
@@ -594,7 +472,7 @@ def handle_login(rocket):
     if  rocket.method == "POST":
         if rocket.launch():
             rocket.msg(f'{rocket.username} authenticated by password')
-            makeme = make_form_welcome()
+            makeme = mk_form_welcome()
         else:
             rocket.msg(f'authentication failure')
     else:
@@ -637,12 +515,12 @@ def handle_dashboard(rocket):
     return rocket.respond(HTTPStatus.OK, 'text/html', dash.dash(rocket.user))
 
 def handle_stub(rocket, more=[]):
-        make_cont = lambda meth_path: f'<h3>Developmennt sub for {meth_path} </h3>{"".join(more)}'
+        mk_cont = lambda meth_path: f'<h3>Developmennt sub for {meth_path} </h3>{"".join(more)}'
         meth_path = f'{rocket.method()} {rocket.path_info}'
-        return rocket.respond(HTTPStatus.OK, 'text/plain', make_cont(meth_path))
+        return rocket.respond(HTTPStatus.OK, 'text/plain', mk_cont(meth_path))
 
 def handle_register(rocket):
-    return handle_stub(rocket, [f'{make_code(_OLD_NOTES)}'])
+    return handle_stub(rocket, [f'{mk_code(_OLD_NOTES)}'])
 
 # TODO: use this to implement register
 _OLD_NOTES="""
@@ -677,10 +555,8 @@ def handle_try_md(rocket):
     else:
         return rocket.respond(HTTPStatus.NOT_FOUND, 'text/html', 'HTTP 404 NOT FOUND')
 
-import config
-
 def application(env, SR):
-    rocket = Rocket(env, SR, config)
+    rocket = Rocket(env, SR)
     if re.match("^(/login|/check|/logout/|/mail_auth)", rocket.path_info):
         return handle_login(rocket)
     elif re.match("^/dashboard", rocket.path_info):

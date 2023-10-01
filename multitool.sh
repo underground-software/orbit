@@ -25,6 +25,7 @@ usage() {
 	echo " -c: create session for user and get token"
 	echo " -v: validate a username and password pair"
 	echo " -n: create new user with supplied password"
+	echo " -m: set new password of username to one supplied"
 	echo " -w: delete (\"withdraw\") user from database"
 	echo " -r: list all users (\"roster\")"
 	echo " -i: increased information (more verbose output)"

@@ -1,4 +1,5 @@
 import sqlite3
+import config
 # nickname  table name
 # USR => users
 # ASN => assignments
@@ -7,7 +8,7 @@ import sqlite3
 
 def _do(cmd, set_=False, get_=False):
     dat = None
-    con = sqlite3.connect(cfg.database)
+    con = sqlite3.connect(config.database)
     new = con.cursor()
     ret = new.execute(cmd)
     if get_:
@@ -27,14 +28,21 @@ SELECT token, username, expiry
 FROM sessions
 WHERE token = "{}";
 """.strip()
-ses_getby_token         = lambda tok: _get(SES_GET_BY_TOKEN.format(tok))
+ses_getby_token         = lambda tok: _get(SES_GETBY_TOKEN.format(tok))
+
+SES_SETEXPIRY_TOKEN="""
+UPDATE sessions
+SET expiry = "{}"
+WHERE token = "{}";
+""".strip()
+ses_setexpiry_token     = lambda tex: _set(SES_SETEXPIRY_TOKEN.format(tex))
 
 SES_GETBY_USERNAME="""
 SELECT token, username, expiry
 FROM sessions
 WHERE username = "{}";
 """.strip()
-ses_getby_username      = lambda usn: _get(SES_GET_BY_USERNAME.format(usn))
+ses_getby_username      = lambda usn: _get(SES_GETBY_USERNAME.format(usn))
 
 SES_INS="""
 INSERT INTO sessions (token, username, expiry)
@@ -142,7 +150,7 @@ SELECT web_id, email_id
 FROM assignments
 WHERE email_id = "{}";
 """.strip()
-asn_getby_email_id      = lambda eid: _get(ASN_GET_BY_EMAIL_ID.format(eid))
+asn_getby_email_id      = lambda eid: _get(ASN_GETBY_EMAIL_ID.format(eid))
 
 ASN_GET="""
 SELECT *
@@ -163,7 +171,7 @@ SELECT registration_id, username, password
 FROM newusers
 WHERE student_id = "{}";
 """.strip()
-reg_getby_stuid         = lambda sid: _set(REG_GET_BY_STUDENTID.format(sid))
+reg_getby_stuid         = lambda sid: _set(REG_GETBY_STUDENTID.format(sid))
 
 REG_DELBY_REGID="""
 DELETE FROM accounts
