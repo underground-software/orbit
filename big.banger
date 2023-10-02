@@ -1,3 +1,6 @@
 #!/bin/bash
+#
+# big.banger: logging wrapper for big.bang
 
+echo -n > big.log
 bash big.bang 2>&1 | tee -a big.log
