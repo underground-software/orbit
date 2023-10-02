@@ -262,7 +262,7 @@ class Rocket:
         self.queries   = parse_qs(self.env.get("QUERY_STRING", ""))
         self._session   = None
         self._msg       = "(silence)"
-        self._headers   = []
+        self.headers   = []
         # enable page formatter selection
         # right now we just make the header and footer for HTML
         # and user the identity function by default
@@ -270,7 +270,7 @@ class Rocket:
         self.body_args  = self.read_body_args_wsgi()
 
     def __repr__(self):
-        return f'Rocket({self.method},{self.path_info},{self.queries},{str(self._headers)},{self._msg},{str(self.session)},{self.body_args})'
+        return f'Rocket({self.method},{self.path_info},{self.queries},{str(self.headers)},{self._msg},{str(self.session)},{self.body_args})'
 
     def __str__(self):
         return repr(self)
@@ -279,11 +279,6 @@ class Rocket:
     def msg(self, msg):
         self._msg = msg
 
-    # this handles our two sesion case,
-    # but this is the place to extend for more general multi-session usage
-    def forwho(self):
-        if self.session:
-            return ['UML', 'LFX'][db.usr_getif_lfx_username(username) is not None]
 
     def len_body(self):
         return int(self.env.get('CONTENT_LENGTH', "0"))
@@ -314,9 +309,8 @@ class Rocket:
     def expiry(self):
         return self._session.expiry     if self._session else None
 
-    # Attempt login using urelencoded credentials from request boy
-    # or directly attempt login
-    def launch(self, username='', password=''):
+    # Attempt login using urelencoded credentials from request body
+    def launch(self):
         new_ses = None
         if self.method == "POST":
             urldecode = lambda key: html.escape(decode(self.body_args.get(encode(key), [b''])[0]))
@@ -327,34 +321,34 @@ class Rocket:
                     new_ses = Session(username=username)
             if new_ses:
                 self._session = new_ses
-                self._headers += self._session.mk_cookie_header()
+                self.headers += self._session.mk_cookie_header()
             return self.session
 
     # Renew current sesssion and set user auth cookie accordingly
     def refuel(self):
         if self.session:
             self._session.extend()
-            self._headers += self._session.mk_cookie_header()
+            self.headers += self._session.mk_cookie_header()
         return self.session
 
     # Logout of current session and clear user auth cookie
     def retire(self):
         self._session.end()
-        self._headers += self._session.mk_cookie_header()
+        self.headers += self._session.mk_cookie_header()
 
     # Set appropriate headers
     def parse_content_type(self, content_type):
         match content_type.split('/'):
             case ['text', subtype]:
-                self._headers += [('Content-Type', f'text/{subtype}')]
+                self.headers += [('Content-Type', f'text/{subtype}')]
                 if subtype == 'html':
                     self.format = self.format_html
             case ['auth', 'badreq']:
-                self._headers += [('Auth-Status', 'Invalid Request')]
+                self.headers += [('Auth-Status', 'Invalid Request')]
             case ['auth', 'badcreds']:
-                self._headers += [('Auth-Status', 'Invalid Credentials')]
+                self.headers += [('Auth-Status', 'Invalid Credentials')]
             case ['auth', auth_port]:
-                self._headers += [('Auth-Status', 'OK'),
+                self.headers += [('Auth-Status', 'OK'),
                                  ('Auth-Port',    auth_port),
                                  ('Auth-server', '127.0.0.1')]
             case _:
@@ -399,6 +393,7 @@ class Rocket:
         return output
 
     def respond(self, *content_desc):
+        print("RESPOND", self)
         # Given total correctness of the server
         # all user requests end up here
         match content_desc:
@@ -408,7 +403,7 @@ class Rocket:
                 self.parse_content_type('text/plain')
                 code = HTTPStatus.INTERNAL_SERVER_ERROR
                 document = 'ERROR: BAD RADIUS CONTENT DESCRIPTION'
-        self._start_res(f'{code.value} {code.phrase}', self._headers)
+        self._start_res(f'{code.value} {code.phrase}', self.headers)
         return [encode(document)]
 
 form_welcome_template="""
@@ -499,18 +494,24 @@ def handle_mail_auth(rocket):
     if not username or not password or protocol not in ('smtp', 'pop3') or method != 'plain':
         return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
 
-    # A valid request with bad credentials returns OK
-    if not rocket.launch(username, password):
-        return rocket.respond(HTTPStatus.OK, 'auth/badcreds', '')
+    # Strange, but a request in valid form with bad credentials returns OK
+    if (pwdhash := db.usr_pwdhashfor_username(username)[0]) is None \
+            or not bcrypt.checkpw(encode(password), encode(pwdhash[0])):
+                return rocket.respond(HTTPStatus.OK, 'auth/badcreds', '')
 
     # auth port depends on whether we are and lfx user and which service we are using
+    # this isn't actually handled in setup yet but that isn't too hard
+    instance = ['DFL', 'LFX'][int(db.usr_getif_lfx_username(username)[0][0]) != 0]
     auth_port = {
-            False   : { 'smtp': '1465', 'pop': '1995' },
-            True    : { 'smtp': '1466', 'pop': '1966' }
-    }[rocket.forwho(username)][protocol]
+            'DFL'   : { 'smtp': '1465', 'pop3': '1995' },
+            'LFX'   : { 'smtp': '1466', 'pop3': '1966' }
+    }[instance][protocol]
 
-    return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
+    rocket.headers += [('Auth-Status', 'OK')]
+    rocket.headers += [('Auth-Server', '127.0.0.1')]
+    rocket.headers += [('Auth-Port', auth_port)]
 
+    return rocket.respond(HTTPStatus.OK, 'text/plain', '')
 
 def handle_logout(rocket):
     if rocket.session:

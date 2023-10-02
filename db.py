@@ -141,7 +141,7 @@ SELECT lfx
 FROM users
 WHERE username = "{}";
 """.strip()
-usr_getif_lfx_username  = lambda usn: _get(USR_GETIF.format(usr))
+usr_getif_lfx_username  = lambda usn: _get(USR_GETIF_LFX_USERNAME.format(usn))
 
 # submission table interface
 
