@@ -57,19 +57,10 @@ pip install -r "$ORBIT_ROOT/pip.deps"
 
 ### SECTION: SELinux configuration ###
 
-# allow the server to access the network
 setsebool -P httpd_can_network_connect 1
-# don't forget to run in data root
-#semanage fcontext -l | grep --quiet orbit || semanage fcontext -a -t httpd_sys_content_t "$ORBIT_ROOT"
-#semanage fcontext -l | grep --quiet "orbit/smtp" || semanage fcontext -a -t bin_t $ORBIT_ROOT/smtp
-#semanage fcontext -l | grep --quiet "orbit/pop3" || semanage fcontext -a -t bin_t $ORBIT_ROOT/pop3
-#restorecon -R -v "$ORBIT_ROOT"
-#restorecon -R -v "$ORBIT_ROOT/docs"
-#restorecon -R -v "$ORBIT_ROOT/smtp"
-#restorecon -R -v "$ORBIT_ROOT/pop3"
+setsebool -P domain_can_mmap_files 1
 # this is slightly jank but it's better than permissive
 # ideally orbit should have a custom policy
-semodule_package -o email.pp -m email.mod
 checkmodule -M -m -o email.mod email.te
 semodule_package -o email.pp -m email.mod
 semodule -i email.pp 
