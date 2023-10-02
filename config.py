@@ -31,6 +31,7 @@ orbit_root   = '/var/orbit'
 dataroot    = f'{orbit_root}/docs'
 # TODO: this will become /var/orbit/databse/orbit.db or something
 database    = f'{orbit_root}/orbit.db'
+basedata    = f'{orbit_root}/default.orbit.db.dump'
 
 email_dir   = f'{orbit_root}/email'
 
@@ -48,4 +49,4 @@ nav_buttons = [
     (        '/info.md', 'Info'     ),
     (           '/cgit', 'Git'      )]
 
-sql_verbose = True
+sql_verbose = False

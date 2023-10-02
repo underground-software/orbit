@@ -139,8 +139,15 @@ def do_list_asn(args):
     asns = db.asn_get()
     print('\n'.join([ASN_FMT.format(a[0], a[1], config.srvname) for a in asns]))
 
+INBOX_FMT="""
+{} submitted to {}@{}
+""".strip()
+def do_list_inbox(args):
+    asns = db.asn_get()
+    print('\n'.join([a[1] for a in asns]))
 
-def hyperspace_main():
+
+def hyperspace_main(raw_args):
     parser = argparse.ArgumentParser(prog='hyperspace', description='Administrate Orbit', epilog=f'source code: {config.source}')
 
     parser.add_argument('-u', '--username', help='Username to operate with')
@@ -192,14 +199,17 @@ def hyperspace_main():
         help='Get the full assignment list',
                          dest='do', const=do_list_asn)
 
+    actions.add_argument('-z', '--plaininboxes', action='store_const',
+        help='Get plain list of local submission inboxes',
+                         dest='do', const=do_list_inbox)
 
-    args = parser.parse_args(sys.argv[1:])
+
+    args = parser.parse_args(raw_args)
     if (args.do):
-        print(args.do.__name__)
         args.do(args)
     else:
         print("Nothing to do. Tip: -h")
     
 
 if __name__ == "__main__":
-    hyperspace_main()
+    hyperspace_main(sys.argv[1:])

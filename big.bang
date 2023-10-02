@@ -33,19 +33,22 @@ ME="$ORBIT_ROOT/`basename $0`"
 EMAIL_DIR=$(read_config email_dir)
 SVC_DIR="/etc/systemd/system"
 
+DATABASE=$(read_config database)
+BASEDATA=$(read_config basedata)
 
 # Install dependencies
 
-dnf install -y "$(cat $ME/dnf.deps)" > /dev/null || die "failed to install dnf.deps"
+dnf install -y $(cat $ORBIT_ROOT/dnf.deps) > /dev/null || die "failed to install dnf.deps"
 
-pip install -r "$ME/pip.deps"
+pip install -r "$ORBIT_ROOT/pip.deps"
 
 # the assignment list lives with the rest of the public data
 # in the kdlp.undeground.software docs root
 # but we have ready-made sqlite commands in a file to genrate it here
 
-# intialize database tables from default template
-sqlite3 orbit.db ".read db.default" ".exit"
+# intialize database tables from default "base data" dump
+[ -f "$DATABASE" ] && mv "$DATABASE" $DATABASE.$(date +%s)
+sqlite3 $DATABASE ".read $BASEDATA" "COMMIT;"
 
 # radius has pretty much no special dependencies outside
 # of databse instalation and the pip/dnf deps
@@ -66,7 +69,7 @@ setsebool -P httpd_can_network_connect 1
 # don't forget to run in data root
 chcon -R -t httpd_sys_content_t .
 make -C smtp SRVNAME="$FQDN" > /dev/null
-make -C pop > /dev/null
+make -C pop3 > /dev/null
 
 # TODO: TEST THIS on system with SELinux enabled
 # Configure SELinux to allow systemd to
@@ -109,21 +112,20 @@ chmod 0750 	$EMAIL_DIR/mail
 mkdir -p 	$EMAIL_DIR/logs
 chmod 0700 	$EMAIL_DIR/logs
 
-chown -R smtp:smtp $EMAIL_DATA
+chown -R smtp:smtp $EMAIL_DIR
 
 # Create submission queue for each assignment
-
-AFILE="$AFILE_LOCAL"
+ASSIGNMENT_LIST=$($ORBIT_ROOT/hyperspace -z)
+#
 # assignment folder creation
-for ANAME in $(grep -v "^#" $AFILE | awk '{print $2}' )
+for ASN in $ASSIGNMENT_LIST
 do
 	# add system group
-	getent group $ANAME > /dev/null || groupadd -r -U smtp $ANAME
-	ADIR="$EDATA/$ANAME"
-	mkdir -p $ADIR
-	chmod 0700 $ADIR
-	chown smtp:$ANAME $ADIR
-	
+	getent group $ASN > /dev/null || groupadd -r -U smtp $ASN
+	ASN_DIR="$EMAIL_DIR/$ASN"
+	mkdir -p $ASN_DIR
+	chmod 0700 $ASN_DIR
+	chown smtp:$ASN $ASN_DIR
 done
 
 # Install systemd services
@@ -181,10 +183,6 @@ EOF
 systemctl enable --now smtp.socket
 systemctl enable --now pop.socket
 
-
-systemctl daemon-reload
-systemctl enable --now $SVCDIR/ata-*.path
-
 # Validate email configuration
 
 systemctl is-active --quiet smtp.socket \
@@ -203,6 +201,7 @@ printf "QUIT\r\n" | netcat localhost 1995 | \
 		|| echo "failed to validate pop3"
 
 
+exit 2
 ### NGINX AND SSL
 # note: consider moving to another script
 # and exending into one external access
