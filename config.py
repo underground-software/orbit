@@ -49,4 +49,4 @@ nav_buttons = [
     (        '/info.md', 'Info'     ),
     (           '/cgit', 'Git'      )]
 
-sql_verbose = False
+sql_verbose = True

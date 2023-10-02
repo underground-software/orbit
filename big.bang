@@ -1,8 +1,6 @@
 #!/bin/bash
 #
-# big.bang: idempotent orbit installation
-#
-#!/bin/bash
+# big.bang: consolidated idenpotent installation of orbit
 
 [ "$(id -u)" == "0" ] || die "this script mut be run by root"
 
@@ -85,10 +83,8 @@ make -C pop3 > /dev/null
 # TODO: TEST THIS on system with SELinux enabled
 # Configure SELinux to allow systemd to
 # run the email server binaries
-semanage fcontext -a -t bin_t $ORBIT_ROOT/pop/pop3
-semanage fcontext -a -t bin_t $ORBIT_ROOT/smtp/smtp
-restorecon -R -v $ORBIT_ROOT
-setsebool -P domain_can_mmap_files 1
+#semanage fcontext -a -t bin_t $ORBIT_ROOT/pop/pop3
+#semanage fcontext -a -t bin_t $ORBIT_ROOT/smtp/smtp
 
 # seems to work with the above
 

@@ -319,8 +319,8 @@ class Rocket:
             urldecode = lambda key: html.escape(decode(self.body_args.get(encode(key), [b''])[0]))
             username = urldecode('username')
             password = urldecode('password')
-            if (pwdhash := db.usr_pwdhashfor_username(username)) and \
-                bcrypt.checkpw(encode(password), encode(pwdhash[0][0])):
+            if (pwdhash := db.usr_pwdhashfor_username(username)[0]) and \
+                bcrypt.checkpw(encode(password), encode(pwdhash[0])):
                     new_ses = Session(username=username)
             if new_ses:
                 self._session = new_ses
@@ -514,11 +514,11 @@ def handle_dashboard(rocket):
 
 def handle_stub(rocket, more=[]):
         mk_cont = lambda meth_path: f'<h3>Developmennt sub for {meth_path} </h3>{"".join(more)}'
-        meth_path = f'{rocket.method()} {rocket.path_info}'
-        return rocket.respond(HTTPStatus.OK, 'text/plain', mk_cont(meth_path))
+        meth_path = f'{rocket.method} {rocket.path_info}'
+        return rocket.respond(HTTPStatus.OK, 'text/html', mk_cont(meth_path))
 
 def handle_register(rocket):
-    return handle_stub(rocket, [f'{mk_code(_OLD_NOTES)}'])
+    return handle_stub(rocket, [f'<code><br />{_OLD_NOTES}</code><br />'])
 
 # TODO: use this to implement register
 _OLD_NOTES="""
@@ -526,18 +526,18 @@ _OLD_NOTES="""
 	print(form_data)
 	if b'student_id' not in form_data or len(form_data[b'student_id']) != 1:
 		start_response('400 Bad Request', [('Content-Type', 'text/html')])
-		return '<h1>Bad Request</h1><br>\n'
+		return '\<h1\>Bad Request\</h1\>\<br\>\n'
 	result = accounts_db_exec(FIND_ACCOUNT_QUERY % escape(str(form_data[b'student_id'][0],'utf-8')))
 	if not result:
 		start_response('200 OK', [('Content-Type', 'text/html')])
-		return '<h1>No such user</h1><br>\n'
+		return '\<h1\>No such user\</h1\>\<br\>\n'
 	((id, username, password),) = result
 	accounts_db_exec(DELETE_ACCOUNT_QUERY % id, commit=True)
 	start_response('200 OK', [('Content-Type', 'text/html')])
 	return f'''\
-	<h1>Save these credentials, you will not be able to access them again</h1><br>
-	<h3>Username: {username}</h1><br>
-	<h3>Password: {password}</h1><br>
+	\<h1\>Save these credentials, you will not be able to access them again\</h1\>\<br\>
+	\<h3\>Username: {username}\</h1\>\<br\>
+	\<h3\>Password: {password}\</h1\>\<br\>
     return rocket.respond(sql.form_register())
 """.strip()
 
