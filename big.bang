@@ -2,6 +2,8 @@
 #
 # big.bang: consolidated idenpotent installation of orbit
 
+echo "BIG.BANG: ORBIT INSTALL"
+
 [ "$(id -u)" == "0" ] || die "this script mut be run by root"
 
 PS4="-|"
@@ -17,6 +19,7 @@ EOF
 
 # in case clock is for some reason unsynced (e.g. revert to snapshot)
 chronyc makestep
+SVC_DIR="/etc/systemd/system"
 
 DOCSRC=$(read_config docsrc)
 DATAROOT=$(read_config dataroot)
@@ -30,13 +33,11 @@ POP3_PORT=$(read_config pop3_port)
 POP3_PORT_EXT=$(read_config pop3_port_ext)
 
 ORBIT_ROOT=$(read_config orbit_root)
-ME="$ORBIT_ROOT/`basename $0`"
-
 EMAIL_DIR=$(read_config email_dir)
-SVC_DIR="/etc/systemd/system"
 
 DATABASE=$(read_config database)
 BASEDATA=$(read_config basedata)
+
 
 # in case we are invoked from somwhere else
 cd $ORBIT_ROOT
@@ -374,3 +375,5 @@ firewall-cmd --add-service=https --permanent 	2>&1 >/dev/null || die "firewall"
 
 # Finally, launch nginx to expose the server
 systemctl enable --now nginx
+
+curl -k https://localhost && echo "BIG.BANG: ORBIT ONLINE"

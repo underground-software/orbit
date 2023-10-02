@@ -2,3 +2,6 @@
 email_data*
 restore.*
 *-backup*
+__pycache__
+docs/
+big.log
