@@ -14,7 +14,6 @@ import db
 sec_per_min = 60
 min_per_ses = cfg.ses_mins
 
-
 # utilities
 
 encode    = lambda dat: bytes(dat, "UTF-8")
@@ -155,7 +154,6 @@ class Session:
                 db.ses_delby_username(username)
             db.ses_ins((self.token, self.username, self.expiry_ts()))
         else:
-            print("HTTP COOKIE:", env.get("HTTP_COOKIE", "asdfasdf"))
             # query overrides cookie
             if (res := queries.get('token', None)):
                 pass
@@ -350,7 +348,7 @@ class Rocket:
             case ['auth', auth_port]:
                 self.headers += [('Auth-Status', 'OK'),
                                  ('Auth-Port',    auth_port),
-                                 ('Auth-server', '127.0.0.1')]
+                                 ('Auth-Server', '127.0.0.1')]
             case _:
                 return False
         return True
@@ -393,7 +391,6 @@ class Rocket:
         return output
 
     def respond(self, *content_desc):
-        print("RESPOND", self)
         # Given total correctness of the server
         # all user requests end up here
         match content_desc:
@@ -403,6 +400,7 @@ class Rocket:
                 self.parse_content_type('text/plain')
                 code = HTTPStatus.INTERNAL_SERVER_ERROR
                 document = 'ERROR: BAD RADIUS CONTENT DESCRIPTION'
+        print(f'respond {code.phrase} {self.headers} {document}')
         self._start_res(f'{code.value} {code.phrase}', self.headers)
         return [encode(document)]
 
@@ -442,7 +440,7 @@ form_login="""
 
 form_logout="""
 <head>
-  <meta http-equiv="Refresh" content="0; URL=/login" />
+  <meta http-equiv="Refeesh" content="0; URL=/login" />
 </head>
 """
 
@@ -485,11 +483,6 @@ def handle_mail_auth(rocket):
     # This should be invariant when ngninx is configured properly
     mail_env_vars = ('HTTP_AUTH_USER', 'HTTP_AUTH_PASS', 'HTTP_AUTH_PROTOCOL', 'HTTP_AUTH_METHOD')
     [username, password, protocol, method] = [rocket.env.get(key) for key in mail_env_vars]
-    print("MAIL AUTH: ", username, password, protocol, method, method == 'plain')
-    print(not username)
-    print(not password)
-    print(protocol not in ('smtp', 'pop3'))
-    print(method != 'plain')
 
     if not username or not password or protocol not in ('smtp', 'pop3') or method != 'plain':
         return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
@@ -507,11 +500,7 @@ def handle_mail_auth(rocket):
             'LFX'   : { 'smtp': '1466', 'pop3': '1966' }
     }[instance][protocol]
 
-    rocket.headers += [('Auth-Status', 'OK')]
-    rocket.headers += [('Auth-Server', '127.0.0.1')]
-    rocket.headers += [('Auth-Port', auth_port)]
-
-    return rocket.respond(HTTPStatus.OK, 'text/plain', '')
+    return rocket.respond(HTTPStatus.OK, f'auth/{auth_port}', '')
 
 def handle_logout(rocket):
     if rocket.session:
