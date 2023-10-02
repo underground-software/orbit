@@ -211,7 +211,6 @@ printf "QUIT\r\n" | netcat localhost 1995 | \
 		|| echo "failed to validate pop3"
 
 
-exit 2
 ### NGINX AND SSL
 # note: consider moving to another script
 # and exending into one external access
@@ -237,12 +236,6 @@ if test -z "${SSL_CRT}" <<< "$SSL_RAW"; then
 fi
 
 # install our nginx config
-
-# I can't imagine we would find nginx config somewhere else
-NGINX_CONFIG_MAIN=/etc/nginx/nginx.conf
-NGINX_CONFIG_ORBIT=/etc/nginx/conf.d/orbit.conf
-# backup old config if different (otherwise second run overwrites)
-diff $NGINX_CONFIG_MAIN $ORBIT_ROOT/nginx.conf.bak 2>&1 >/dev/null && cp $NGINX_CONFIG_MAIN $ORBIT_ROOT/nginx.conf.bak
 
 if [ "$PRODUCTION" == "True" ]; then
 DEV_BLOCK=""
@@ -373,3 +366,15 @@ mail {
 	}
 }
 EOF
+
+
+# Allow external access
+firewall-cmd --add-service=pop3s		2>&1 >/dev/null || die "firewall"
+firewall-cmd --add-service=pop3s --permanent	2>&1 >/dev/null || die "firewall"
+firewall-cmd --add-service=smtps  		2>&1 >/dev/null || die "firewall"
+firewall-cmd --add-service=smtps --permanent 	2>&1 >/dev/null || die "firewall"
+firewall-cmd --add-service=https		2>&1 >/dev/null || die "firewall"
+firewall-cmd --add-service=https --permanent 	2>&1 >/dev/null || die "firewall"
+
+# Finally, launch nginx to expose the server
+systemctl enable --now nginx
