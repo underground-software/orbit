@@ -2,7 +2,6 @@
 #
 # big.bang: consolidated idenpotent installation of orbit
 
-
 ### SECTION: preamble ###
 
 echo "BIG.BANG: ORBIT INSTALL"
@@ -245,13 +244,13 @@ if [ "$PRODUCTION" == "True" ]; then
 DEV_BLOCK=""
 DEV_OPT=""
 else
-DEV_BLOCK=$(echo -e "\nlocation = /devfooter {\n\tinternal;\n\treturn 200 \"<br><hr><i><b>Development Instance</b></i><hr>\";\n}\n\n")
-DEV_OPT=$(echo -e "\n\tadd_after_body /devfooter;\n\n")
+DEV_BLOCK=$(echo -e "\n\t\tlocation = /devfooter {\n\t\t\tinternal;\n\t\t\treturn 200 \"<br><hr><i><b>Development Instance</b></i><hr>\";\n\t\t}\n\n\n")
+DEV_OPT=$(echo -e "\t\tadd_after_body /devfooter;\n\t\t")
 fi
 
 cat > /etc/nginx/nginx.conf <<EOF
-# Main NGINX config for KDLP ORBIT
-# TODO: automated TLS configuation
+# orbit nginx configuration
+# generated on $(date) by big.bang
 
 user nginx;
 worker_processes auto;
@@ -288,7 +287,45 @@ http {
 		listen [::]:443 ssl;
 		include /etc/letsencrypt/options-ssl-nginx.conf;
 		ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-		include /etc/nginx/conf.d/orbit.conf;
+		error_page 401 /login?target=$uri;
+		error_page 403 /403.md;
+		error_page 404 /404.md;
+		error_page 502 /502.md;
+		error_page 502 /502.md;
+		error_page 500 /500.md;
+
+		# DOCUMENT ROOT
+		location / {
+		    root /var/orbit/docs;
+		}
+
+		# MATRIX
+		location /.well-known/matrix/client {
+			return 200 '{"m.homeserver": {"base_url": "https://${FQDN}:${MATRIX_PORT}"}}';
+			default_type application/json;
+			add_header Access-Control-Allow-Origin *;
+		}
+		${DEV_BLOCK}
+		location = / {
+		    rewrite .* /index.md;
+		}
+
+		# RADIUS
+		location ~* ^((?!/cgit)(.*\.md)|/log(in|out)|/dashboard|/register|/mail_auth)$ {
+			include uwsgi_params;
+			proxy_pass http://localhost:$RADIUS_PORT;
+		${DEV_OPT}}
+
+		# CGIT TODO
+		location ~* /cgit(.*) {
+			include fastcgi_params;
+
+			fastcgi_param SCRIPT_FILENAME /var/www/cgi-bin/cgit;
+			fastcgi_param PATH_INFO \$1;
+
+			fastcgi_pass localhost:7070;
+		}
+
 	}
 	server {
 		listen 80;
@@ -299,51 +336,7 @@ http {
 		return 404;
 	}
 }
-include /etc/nginx/conf.d/mail.conf;
-EOF
 
-cat > /etc/nginx/conf.d/orbit.conf <<EOF
-error_page 401 /login?target=$uri;
-error_page 403 /403.md;
-error_page 404 /404.md;
-error_page 502 /502.md;
-error_page 502 /502.md;
-error_page 500 /500.md;
-
-# DOCUMENT ROOT
-location / {
-    root /var/orbit/docs;
-}
-
-# MATRIX
-location /.well-known/matrix/client {
-	return 200 '{"m.homeserver": {"base_url": "https://${FQDN}:${MATRIX_PORT}"}}';
-	default_type application/json;
-	add_header Access-Control-Allow-Origin *;
-}
-${DEV_BLOCK}
-location = / {
-    rewrite .* /index.md;
-}
-
-# RADIUS
-location ~* ^((?!/cgit)(.*\.md)|/log(in|out)|/dashboard|/register|)$ {
-	include uwsgi_params;
-	proxy_pass http://localhost:$RADIUS_PORT;
-${DEV_OPT}}
-
-# CGIT TODO
-location ~* /cgit(.*) {
-	include fastcgi_params;
-
-	fastcgi_param SCRIPT_FILENAME /var/www/cgi-bin/cgit;
-	fastcgi_param PATH_INFO \$1;
-
-	fastcgi_pass localhost:7070;
-}
-EOF
-
-cat > /etc/nginx/conf.d/mail.conf <<EOF
 mail {
 	proxy_pass_error_message on;
 
@@ -352,7 +345,7 @@ mail {
 	ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
 	server {
-		auth_http 127.0.0.1:9092/mail_auth;
+		auth_http 127.0.0.1:$RADIUS_PORT/mail_auth;
 		listen $SMTP_PORT_EXT ssl;
 		protocol smtp;
 		smtp_auth plain login;
@@ -361,7 +354,7 @@ mail {
 	}
 
 	server {
-		auth_http 127.0.0.1:9092/mail_auth;
+		auth_http 127.0.0.1:$RADIUS_PORT/mail_auth;
 		listen $POP3_PORT_EXT ssl;
 		protocol pop3;
 		pop3_auth plain;

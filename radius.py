@@ -263,7 +263,10 @@ class Rocket:
         self._session   = None
         self._msg       = "(silence)"
         self._headers   = []
-        self._format    = lambda x: x
+        # enable page formatter selection
+        # right now we just make the header and footer for HTML
+        # and user the identity function by default
+        self.format    = lambda x: x
         self.body_args  = self.read_body_args_wsgi()
 
     def __repr__(self):
@@ -485,10 +488,15 @@ def handle_login(rocket):
 
 def handle_mail_auth(rocket):
     # This should be invariant when ngninx is configured properly
-    mail_env_vars = ('HTTP_AUTH_USER' 'HTTP_AUTH_PASS', 'HTTP_AUTH_PROTOCOL', 'HTTP_AUTH_METHOD')
-    [username, password, protocol, method] = [rocket.envget(key) for key in mail_env_vars]
+    mail_env_vars = ('HTTP_AUTH_USER', 'HTTP_AUTH_PASS', 'HTTP_AUTH_PROTOCOL', 'HTTP_AUTH_METHOD')
+    [username, password, protocol, method] = [rocket.env.get(key) for key in mail_env_vars]
+    print("MAIL AUTH: ", username, password, protocol, method, method == 'plain')
+    print(not username)
+    print(not password)
+    print(protocol not in ('smtp', 'pop3'))
+    print(method != 'plain')
 
-    if not username or not password or protocol not in ('smtp', 'pop') or method != 'plain':
+    if not username or not password or protocol not in ('smtp', 'pop3') or method != 'plain':
         return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
 
     # A valid request with bad credentials returns OK
