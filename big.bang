@@ -18,6 +18,7 @@ EOF
 }
 
 DOCSRC=$(read_config docsrc)
+DATAROOT=$(read_config dataroot)
 FQDN=$(read_config srvname)
 PRODUCTION=$(read_config production)
 
@@ -36,6 +37,17 @@ SVC_DIR="/etc/systemd/system"
 DATABASE=$(read_config database)
 BASEDATA=$(read_config basedata)
 
+# in case we are invoked from somwhere else
+cd $ORBIT_ROOT
+
+[ ! -d "$DATAROOT" ] && git clone $DOCSRC
+# SELinux configuration
+
+# allow the server to access the network
+setsebool -P httpd_can_network_connect 1
+# don't forget to run in data root
+chcon -R -t httpd_sys_content_t .
+
 # Install dependencies
 
 dnf install -y $(cat $ORBIT_ROOT/dnf.deps) > /dev/null || die "failed to install dnf.deps"
@@ -52,22 +64,19 @@ sqlite3 $DATABASE ".read $BASEDATA" "COMMIT;"
 
 # radius has pretty much no special dependencies outside
 # of databse instalation and the pip/dnf deps
-cat > $SVCDIR/radius.service <<EOF
+cat > $SVC_DIR/radius.service <<EOF
 [Unit]
 Description=Orbit frontend HTML server
 
 [Service]
 WorkingDirectory=$ORBIT_ROOT
-ExecStart=$ORBIT_ROOT/radius.start
+ExecStart=uwsgi $ORBIT_ROOT/radius.ini
 EOF
+# Immediately enable radius
+systemctl daemon-reload
+systemctl enable --now radius
 
-# incoming mail is stored here
-# SELinux configuration
 
-# allow the server to access the network
-setsebool -P httpd_can_network_connect 1
-# don't forget to run in data root
-chcon -R -t httpd_sys_content_t .
 make -C smtp SRVNAME="$FQDN" > /dev/null
 make -C pop3 > /dev/null
 
@@ -130,7 +139,7 @@ done
 
 # Install systemd services
 
-cat > $SVCDIR/smtp@.service <<EOF
+cat > $SVC_DIR/smtp@.service <<EOF
 [Unit]
 Description=per-connection smtp service
 
@@ -139,10 +148,10 @@ User=smtp
 StandardInput=socket
 CapabilityBoundingSet=cap_dac_read_search
 AmbientCapabilities=cap_dac_read_search
-ExecStart=$ME/smtp/smtp $EDATA
+ExecStart=$ORBIT_ROOT/smtp/smtp $EMAIL_DIR
 EOF
 
-cat > $SVCDIR/smtp.socket <<EOF
+cat > $SVC_DIR/smtp.socket <<EOF
 [Unit]
 Description=smtp server socket
 
@@ -155,17 +164,17 @@ Accept=yes
 WantedBy=sockets.target
 EOF
 
-cat > $SVCDIR/pop@.service <<EOF
+cat > $SVC_DIR/pop3@.service <<EOF
 [Unit]
-Description=per-connection pop service
+Description=per-connection pop3 service
 
 [Service]
 User=pop
 StandardInput=socket
-ExecStart=$ME/pop/pop3 $EDATA/mail/
+ExecStart=$ORBIT_ROOT/pop3/pop3 $EMAIL_DIR/mail
 EOF
 
-cat > $SVCDIR/pop.socket <<EOF
+cat > $SVC_DIR/pop3.socket <<EOF
 [Unit]
 Description=pop3 server socket
 
@@ -180,15 +189,16 @@ EOF
 
 
 # Immediately enable email servers
+systemctl daemon-reload
 systemctl enable --now smtp.socket
-systemctl enable --now pop.socket
+systemctl enable --now pop3.socket
 
 # Validate email configuration
 
 systemctl is-active --quiet smtp.socket \
 	|| echo "failed to install smtp"
-systemctl is-active --quiet pop.socket  \
-	|| echo "failed to install pop"
+systemctl is-active --quiet pop3.socket  \
+	|| echo "failed to install pop3"
 
 printf "QUIT\r\n" | netcat localhost 1465 | \
 	diff -up /dev/stdin <(printf \
