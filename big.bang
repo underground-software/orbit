@@ -2,12 +2,16 @@
 #
 # big.bang: consolidated idenpotent installation of orbit
 
+
+### SECTION: preamble ###
+
 echo "BIG.BANG: ORBIT INSTALL"
 
 [ "$(id -u)" == "0" ] || die "this script mut be run by root"
 
 PS4="-|"
 set -e -x
+
 die() { echo "error: $1"; exit 1 ; }
 read_config() {
 	[ -z "${1}" ] && die "read_config needs argument"
@@ -16,6 +20,8 @@ import config
 print(config.$1)
 EOF
 }
+
+### SECTION: initialize environment ###
 
 # in case clock is for some reason unsynced (e.g. revert to snapshot)
 chronyc makestep
@@ -45,26 +51,37 @@ cd $ORBIT_ROOT
 [ ! -d "$DATAROOT" ] && git clone "$DOCSRC" "$DATAROOT"
 # temporary while master is not default FIXME
 cd $DATAROOT && git checkout master && cd $ORBIT_ROOT
-# SELinux configuration
+
+# Install dependencies
+dnf install -y $(cat $ORBIT_ROOT/dnf.deps) > /dev/null || die "failed to install dnf.deps"
+pip install -r "$ORBIT_ROOT/pip.deps"
+
+### SECTION: SELinux configuration ###
 
 # allow the server to access the network
 setsebool -P httpd_can_network_connect 1
 # don't forget to run in data root
 chcon -R -t httpd_sys_content_t .
+# seport != seaport: seaport is expensive
+# and seport fixes last known bug in basic usage of this script
+SEPORTLIST_HTTP=$(semanage port -l | grep --quiet http_port_t)
 
-# Install dependencies
-dnf install -y $(cat $ORBIT_ROOT/dnf.deps) > /dev/null || die "failed to install dnf.deps"
+# Since nginx proxies our internal mail system, the smtp.socket and pop.socket units
+# are triggered by nginx in httpd_t context, so when the email servers are triggered,
+# aceess is denied by SELinux unless the ports the sockets bind to have the same context
+# in which their invocation was generated, i.e. http_port_t
+echo $SEPORTLIST_HTTP | grep --quiet 465 || semanage port -m -t http_port_t -p tcp 465
+echo $SEPORTLIST_HTTP | grep --quiet 995 || semanage port -m -t http_port_t -p tcp 995
 
-pip install -r "$ORBIT_ROOT/pip.deps"
+### SECTION: initialize radius ###
 
-# the assignment.list file lives with the rest of the public data
-
-# intialize database tables from default "base data" dump
+# There is an assignment.list file that lives with the rest of the public data
+# however we just intialize database tables from default "base data" dump
 [ -f "$DATABASE" ] && mv "$DATABASE" $DATABASE.$(date +%s)
 sqlite3 $DATABASE ".read $BASEDATA" "COMMIT;"
-
 # radius has pretty much no special dependencies outside
 # of databse instalation and the pip/dnf deps
+# which is a fabulous upgrade from the chaos of cano.py
 cat > $SVC_DIR/radius.service <<EOF
 [Unit]
 Description=Orbit frontend HTML server
@@ -73,21 +90,13 @@ Description=Orbit frontend HTML server
 WorkingDirectory=$ORBIT_ROOT
 ExecStart=uwsgi $ORBIT_ROOT/radius.ini
 EOF
-# Immediately enable radius
 systemctl daemon-reload
 systemctl enable --now radius
 
+### SECTION: install email ###
 
 make -C smtp SRVNAME="$FQDN" > /dev/null
 make -C pop3 > /dev/null
-
-# TODO: TEST THIS on system with SELinux enabled
-# Configure SELinux to allow systemd to
-# run the email server binaries
-#semanage fcontext -a -t bin_t $ORBIT_ROOT/pop/pop3
-#semanage fcontext -a -t bin_t $ORBIT_ROOT/smtp/smtp
-
-# seems to work with the above
 
 # Configure smtp and pop users and groups
 
@@ -210,11 +219,7 @@ printf "QUIT\r\n" | netcat localhost 1995 | \
 		|| echo "failed to validate pop3"
 
 
-### NGINX AND SSL
-# note: consider moving to another script
-# and exending into one external access
-# configuration script setting up nginx,
-# and SSL certification
+### SECTION: validate SSL certificates ###
 
 SSL_RAW=$(certbot certificates -d $FQDN 2>/dev/null)
 if grep -q 'No certificates found.' <<< "$SSL_RAW"; then
@@ -234,7 +239,7 @@ if test -z "${SSL_CRT}" <<< "$SSL_RAW"; then
 	exit 1
 fi
 
-# install our nginx config
+### SECTION: install nginx configuration ###
 
 if [ "$PRODUCTION" == "True" ]; then
 DEV_BLOCK=""
@@ -364,6 +369,7 @@ mail {
 }
 EOF
 
+### SECTION: online orbit ###
 
 # Allow external access
 firewall-cmd --add-service=pop3s		2>&1 >/dev/null || die "firewall"
