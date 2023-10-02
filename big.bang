@@ -17,6 +17,9 @@ print(config.$1)
 EOF
 }
 
+# in case clock is for some reason unsynced (e.g. revert to snapshot)
+chronyc makestep
+
 DOCSRC=$(read_config docsrc)
 DATAROOT=$(read_config dataroot)
 FQDN=$(read_config srvname)
@@ -40,7 +43,9 @@ BASEDATA=$(read_config basedata)
 # in case we are invoked from somwhere else
 cd $ORBIT_ROOT
 
-[ ! -d "$DATAROOT" ] && git clone $DOCSRC
+[ ! -d "$DATAROOT" ] && git clone "$DOCSRC" "$DATAROOT"
+# temporary while master is not default FIXME
+cd $DATAROOT && git checkout master && cd $ORBIT_ROOT
 # SELinux configuration
 
 # allow the server to access the network
@@ -49,14 +54,11 @@ setsebool -P httpd_can_network_connect 1
 chcon -R -t httpd_sys_content_t .
 
 # Install dependencies
-
 dnf install -y $(cat $ORBIT_ROOT/dnf.deps) > /dev/null || die "failed to install dnf.deps"
 
 pip install -r "$ORBIT_ROOT/pip.deps"
 
-# the assignment list lives with the rest of the public data
-# in the kdlp.undeground.software docs root
-# but we have ready-made sqlite commands in a file to genrate it here
+# the assignment.list file lives with the rest of the public data
 
 # intialize database tables from default "base data" dump
 [ -f "$DATABASE" ] && mv "$DATABASE" $DATABASE.$(date +%s)
@@ -83,10 +85,10 @@ make -C pop3 > /dev/null
 # TODO: TEST THIS on system with SELinux enabled
 # Configure SELinux to allow systemd to
 # run the email server binaries
-# semanage fcontext -a -t bin_t $ME/pop/pop3
-# semanage fcontext -a -t bin_t $ME/smtp/smtp
-# restorecon -R -v $ME
-#setsebool -P domain_can_mmap_files 1
+semanage fcontext -a -t bin_t $ORBIT_ROOT/pop/pop3
+semanage fcontext -a -t bin_t $ORBIT_ROOT/smtp/smtp
+restorecon -R -v $ORBIT_ROOT
+setsebool -P domain_can_mmap_files 1
 
 # seems to work with the above
 
@@ -241,8 +243,8 @@ if [ "$PRODUCTION" == "True" ]; then
 DEV_BLOCK=""
 DEV_OPT=""
 else
-DEV_BLOCK="\nlocation = /devfooter {\n\tinternal;\n\treturn 200 \"<br><hr><i><b>Development Instance</b></i><hr>\";\n}\n\n"
-DEV_OPT="\n\tadd_after_body /devfooter;\n"
+DEV_BLOCK=$(echo -e "\nlocation = /devfooter {\n\tinternal;\n\treturn 200 \"<br><hr><i><b>Development Instance</b></i><hr>\";\n}\n\n")
+DEV_OPT=$(echo -e "\n\tadd_after_body /devfooter;\n\n")
 fi
 
 cat > /etc/nginx/nginx.conf <<EOF
@@ -262,9 +264,9 @@ events {
 }
 
 http {
-	log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-		      '$status $body_bytes_sent "$http_referer" '
-		      '"$http_user_agent" "$http_x_forwarded_for"';
+	log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+		      '\$status \$body_bytes_sent "\$http_referer" '
+		      '"\$http_user_agent" "\$http_x_forwarded_for"';
 
 	access_log  /var/log/nginx/access.log  main;
 
@@ -284,12 +286,12 @@ http {
 		listen [::]:443 ssl;
 		include /etc/letsencrypt/options-ssl-nginx.conf;
 		ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-		include /etc/nginx/conf.d/kdlp.conf;
+		include /etc/nginx/conf.d/orbit.conf;
 	}
 	server {
 		listen 80;
 		listen [::]:80;
-		if ($host = ${FQDN}) {
+		if (\$host = ${FQDN}) {
 			return 301 https://$host$request_uri;
 		}
 		return 404;
@@ -317,8 +319,6 @@ location /.well-known/matrix/client {
 	default_type application/json;
 	add_header Access-Control-Allow-Origin *;
 }
-
-}
 ${DEV_BLOCK}
 location = / {
     rewrite .* /index.md;
@@ -327,7 +327,7 @@ location = / {
 # RADIUS
 location ~* ^((?!/cgit)(.*\.md)|/log(in|out)|/dashboard|/register|)$ {
 	include uwsgi_params;
-	proxy_pass http://localhost:@@RADIUS_PORT@@;
+	proxy_pass http://localhost:$RADIUS_PORT;
 ${DEV_OPT}}
 
 # CGIT TODO
@@ -335,7 +335,7 @@ location ~* /cgit(.*) {
 	include fastcgi_params;
 
 	fastcgi_param SCRIPT_FILENAME /var/www/cgi-bin/cgit;
-	fastcgi_param PATH_INFO $1;
+	fastcgi_param PATH_INFO \$1;
 
 	fastcgi_pass localhost:7070;
 }

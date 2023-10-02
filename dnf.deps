@@ -4,6 +4,8 @@ clang
 nginx
 sqlite
 pip
+python
 python-devel
 cronie
+chrony
 gcc
