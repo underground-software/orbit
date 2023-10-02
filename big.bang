@@ -376,4 +376,6 @@ firewall-cmd --add-service=https --permanent 	2>&1 >/dev/null || die "firewall"
 # Finally, launch nginx to expose the server
 systemctl enable --now nginx
 
-curl -k https://localhost && echo "BIG.BANG: ORBIT ONLINE"
+curl -k https://localhost 2>&1 >/dev/null \
+	&& echo "BIG.BANG: ORBIT ONLINE"  \
+	|| echo "BIG.BANG: ORBIT OFFLINE"
