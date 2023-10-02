@@ -2,10 +2,11 @@ Feature 	Implementation	Status
 
 email		pop3/smtp	done
 md2html		radius		done
-auth		radius		doing
+auth		radius		done
+deploy		big.bang	doing
 dash		radius		todo
-deploy		big.bang	todo
 autograder	ata		todo
+
 
 Orbit data needs to db tables mapping:
 

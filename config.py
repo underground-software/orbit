@@ -5,6 +5,7 @@
 appname  = 'orbit'
 version  = '0.1'
 source   = 'https://github.com/underground-software/orbit'
+docs     = 'https://github.com/underground-software/kdlp.underground.software'
 
 # make exernal GET request to find these documents
 logo_get    = '/images/kdlp_logo.png'

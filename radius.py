@@ -374,13 +374,16 @@ class Rocket:
         nav_btn_gen =    lambda: ''.join([mk_navbt(pair[1], pair[0]) for pair in nav_kvs])
         nav_div_gen =    lambda: f'<hr />{mk_div("nav", nav_btn_gen())}{mk_sep()}\n'
 
+        # loads cookie if exists
+        self.session
+
         # Prepare footer
         msgdoc  = []
-        msgdoc += [(    'msg', self._msg)]
-        msgdoc += [('whoami', self.username)]
-        msgdoc += [('appname', cfg.appname)]
-        msgdoc += [('version', cfg.version)]
-        msgdoc += [('source', cfg.source)]
+        msgdoc += [(    'msg',  self._msg)]
+        msgdoc += [('whoami',   self.username)]
+        msgdoc += [('appname',  cfg.appname)]
+        msgdoc += [('version',  cfg.version)]
+        msgdoc += [('source',   cfg.source)]
         # Concatenate all components to complete this format operation
         output = ''
         output += mk_style()

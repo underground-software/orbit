@@ -22,15 +22,34 @@ setsebool -P httpd_can_network_connect 1
 # don't forget to run in data root
 chcon -R -t httpd_sys_content_t .
 
+read_config() {
+	[ -z "${1}" ] && die "read_config needs argument"
+
+	KEY=$1
+	cat <<EOF | python3
+import config
+print(config.$KEY)
+EOF
+}
+
+read_config
+
+echo "DEV EXIT EARLY"
+exit 0
+
 # setup database
 sqlite3 orbit.db ".read db.default" ".exit"
 
+DOC_SOURCE="kdlp.underground.software"
 
-# the assignment list currently lives in
-# mercury, but this will change as we
+# the assignment list lives with the res of the public data
+# in the kdlp.undeground.software docs root
 # refactor our database backend
 ATABIN="$PRE/cano.py/mercury"
 AFILE_LOCAL="$ATABIN/assignments.list"
+
+
+
 
 # incoming mail is stored here
 EDATA="$PRE/email_data"
@@ -110,7 +129,6 @@ do
 
 
 if [ -z "$SKIP_SVC_INSTALL" ]; then
-
 	# create systemd.path and service trigger for each assigment
 		cat > $SVCDIR/ata-$ANAME.path <<EOF
 [Path]
