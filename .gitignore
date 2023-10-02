@@ -4,4 +4,4 @@ restore.*
 *-backup*
 __pycache__
 docs/
-big.log
+big.log*
