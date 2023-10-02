@@ -5,3 +5,4 @@ restore.*
 __pycache__
 docs/
 big.log*
+email*
