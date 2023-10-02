@@ -132,6 +132,13 @@ def do_list_sessions(args):
     l = db.ses_get()
     print('\n'.join([SES_FMT.format(s[1], datetime.fromtimestamp(s[2]), s[0]) for s in l]))
 
+ASN_FMT="""
+{} submitted to {}@{}
+""".strip()
+def do_list_asn(args):
+    asns = db.asn_get()
+    print('\n'.join([ASN_FMT.format(a[0], a[1], config.srvname) for a in asns]))
+
 
 def multitool_main():
     parser = argparse.ArgumentParser(prog='multitool', description='Administrate Orbit', epilog=f'source code: {config.source}')
@@ -139,6 +146,7 @@ def multitool_main():
     parser.add_argument('-u', '--username', help='Username to operate with')
     parser.add_argument('-p', '--password', help='Password to operate with')
     parser.add_argument('-t', '--token', help='Token to operate with')
+    parser.add_argument('-e', '--exercise', help='Assignment/Exercise to operate with')
 
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument('-r', '--roster', action='store_const',
@@ -180,6 +188,10 @@ def multitool_main():
     actions.add_argument('-q', '--queryuser', action='store_const',
         help='Get information about supplied username if valid',
                          dest='do', const=do_query_username)
+    actions.add_argument('-a', '--assignments', action='store_const',
+        help='Get the full assignment list',
+                         dest='do', const=do_list_asn)
+
 
     args = parser.parse_args(sys.argv[1:])
     if (args.do):
