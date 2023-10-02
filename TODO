@@ -6,6 +6,8 @@ auth		radius		done
 deploy		big.bang	doing
 dash		radius		todo
 autograder	ata		todo
+matrix		synapse		todo
+git		cgit		todo
 
 
 Orbit data needs to db tables mapping:
@@ -34,7 +36,6 @@ REG	usr 1=> creds	once per-student
 TODO when working:
 - reconsider registration
 - 
-
 
 Secure data:
 - email storage configured by big.bang imported from webservers dev
@@ -86,3 +87,6 @@ orbit
 └── wsgi.py
 
 5 directories, 36 files
+
+other ideas:
+assignments database generated from public list

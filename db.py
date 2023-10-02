@@ -26,7 +26,7 @@ def _do(cmd, set_=False, get_=False):
     con.close()
     return dat
 
-_set = lambda cmd: _do(cmd, set_=True)
+_set = lambda cmd: _do(cmd, set_=True, get_=True)
 _get = lambda cmd: _do(cmd, get_=True)
 
 # session table interface
@@ -74,8 +74,8 @@ RETURNING username;
 ses_delby_username      = lambda usn: _set(SES_DELBY_USERNAME.format(usn))
 
 SES_GET="""
-SELECT id, username, pwdhash, lfx
-FROM users;
+SELECT token, username, expiry
+FROM sessions;
 """.strip()
 ses_get                 = lambda    : _get(SES_GET)
 
@@ -92,13 +92,49 @@ USR_INS="""
 INSERT INTO users (username, pwdhash, lfx, student_id)
 VALUES ("{}", "{}", "{}", "{}");
 """.strip()
-usr_ins                 = lambda usr: _set(USR_INS.format(usr))
+usr_ins                 = lambda usr: _set(USR_INS.format(*usr))
+
+USR_DELBY_USERNAME="""
+DELETE FROM users
+WHERE username = "{}"
+RETURNING username;
+""".strip()
+usr_delby_username      = lambda usn: _set(USR_DELBY_USERNAME.format(usn))
+
+USR_SETPWDHASH_USERNAME="""
+UPDATE users
+SET pwdhash = "{}"
+WHERE username = "{}";
+""".strip()
+usr_setpwdhash_username = lambda usr: _set(USR_SETPWDHASH_USERNAME.format(*usr))
 
 USR_GET="""
-SELECT id, username, pwdhash, lfx
+SELECT id, username, pwdhash, lfx, student_id
 FROM users;
 """.strip()
 usr_get                 = lambda    : _get(USR_GET)
+
+USR_GETBY_USERNAME="""
+SELECT id, username, pwdhash, lfx, student_id
+FROM users
+WHERE username = "{}";
+""".strip()
+usr_getby_username      = lambda usn: _get(USR_GETBY_USERNAME.format(usn))
+	
+
+USR_SET_LFX="""
+UPDATE users
+SET lfx = True
+WHERE username = "{}";
+""".strip()
+usr_set_lfx             = lambda usn: _set(USR_SET_LFX.format(usn))
+
+USR_SET_NOLFX="""
+UPDATE users
+SET lfx = False
+WHERE username = "{}";
+""".strip()
+usr_set_nolfx           = lambda usn: _set(USR_SET_NOLFX.format(usn))
 
 USR_GETIF_LFX_USERNAME="""
 SELECT lfx

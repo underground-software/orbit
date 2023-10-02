@@ -1,74 +1,70 @@
 #!/bin/bash
 #
-# big.bang: idemotent orbit installation
+# big.bang: idempotent orbit installation
 #
 #!/bin/bash
 
+[ "$(id -u)" == "0" ] || die "this script mut be run by root"
+
 PS4="-|"
 set -e -x
-
-SMTP_PORT=1465
-SMTP_PORT_EXT=465
-POP3_PORT=1995
-POP3_PORT_EXT=995
-
-PRE="/var/orbit"
-ME="$PRE/big.bang"
-
-FQDN="${SRVNAME:-$(hostname)}"
-
-# allow the server to access the network
-setsebool -P httpd_can_network_connect 1
-# don't forget to run in data root
-chcon -R -t httpd_sys_content_t .
-
+die() { echo "error: $1"; exit 1 ; }
 read_config() {
 	[ -z "${1}" ] && die "read_config needs argument"
-
-	KEY=$1
 	cat <<EOF | python3
 import config
-print(config.$KEY)
+print(config.$1)
 EOF
 }
 
-read_config
+DOCSRC=$(read_config docsrc)
+FQDN=$(read_config srvname)
+PRODUCTION=$(read_config production)
 
-echo "DEV EXIT EARLY"
-exit 0
+RADIUS_PORT=$(read_config radius_port)
+SMTP_PORT=$(read_config smtp_port)
+SMTP_PORT_EXT=$(read_config smtp_port_ext)
+POP3_PORT=$(read_config pop3_port)
+POP3_PORT_EXT=$(read_config pop3_port_ext)
 
-# setup database
-sqlite3 orbit.db ".read db.default" ".exit"
+ORBIT_ROOT=$(read_config orbit_root)
+ME="$ORBIT_ROOT/`basename $0`"
 
-DOC_SOURCE="kdlp.underground.software"
-
-# the assignment list lives with the res of the public data
-# in the kdlp.undeground.software docs root
-# refactor our database backend
-ATABIN="$PRE/cano.py/mercury"
-AFILE_LOCAL="$ATABIN/assignments.list"
-
-
+EMAIL_DIR=$(read_config email_dir)
+SVC_DIR="/etc/systemd/system"
 
 
-# incoming mail is stored here
-EDATA="$PRE/email_data"
-SVCDIR="/etc/systemd/system"
-
-die() { echo "error: $1";   exit 1 ; }
-
-[ "$(id -u)" == "0" ] || die "this script mut be run by root"
-[ ! -z "$SRVNAME" ] || die "env var SRVNAME must be defined"
-
-
-### DEPLOY POP AND SMTP
-
-# Build the server executables
+# Install dependencies
 
 dnf install -y "$(cat $ME/dnf.deps)" > /dev/null || die "failed to install dnf.deps"
 
 pip install -r "$ME/pip.deps"
 
+# the assignment list lives with the rest of the public data
+# in the kdlp.undeground.software docs root
+# but we have ready-made sqlite commands in a file to genrate it here
+
+# intialize database tables from default template
+sqlite3 orbit.db ".read db.default" ".exit"
+
+# radius has pretty much no special dependencies outside
+# of databse instalation and the pip/dnf deps
+cat > $SVCDIR/radius.service <<EOF
+[Unit]
+Description=Orbit frontend HTML server
+
+[Service]
+WorkingDirectory=$ORBIT_ROOT
+ExecStart=$ORBIT_ROOT/radius.start
+EOF
+
+# incoming mail is stored here
+# SELinux configuration
+
+# allow the server to access the network
+setsebool -P httpd_can_network_connect 1
+# don't forget to run in data root
+chcon -R -t httpd_sys_content_t .
 make -C smtp SRVNAME="$FQDN" > /dev/null
 make -C pop > /dev/null
 
@@ -80,6 +76,7 @@ make -C pop > /dev/null
 # restorecon -R -v $ME
 #setsebool -P domain_can_mmap_files 1
 
+# seems to work with the above
 
 # Configure smtp and pop users and groups
 
@@ -105,14 +102,14 @@ id -u pop 2>&1 > /dev/null 		\
 
 # Create mail inbox and submission log
 
-mkdir -p 	$EDATA
-chmod 0710 	$EDATA
-mkdir -p 	$EDATA/mail
-chmod 0750 	$EDATA/mail
-mkdir -p 	$EDATA/logs
-chmod 0700 	$EDATA/logs
+mkdir -p 	$EMAIL_DIR
+chmod 0710 	$EMAIL_DIR
+mkdir -p 	$EMAIL_DIR/mail
+chmod 0750 	$EMAIL_DIR/mail
+mkdir -p 	$EMAIL_DIR/logs
+chmod 0700 	$EMAIL_DIR/logs
 
-chown -R smtp:smtp $EDATA
+chown -R smtp:smtp $EMAIL_DATA
 
 # Create submission queue for each assignment
 
@@ -126,52 +123,7 @@ do
 	mkdir -p $ADIR
 	chmod 0700 $ADIR
 	chown smtp:$ANAME $ADIR
-
-
-if [ -z "$SKIP_SVC_INSTALL" ]; then
-	# create systemd.path and service trigger for each assigment
-		cat > $SVCDIR/ata-$ANAME.path <<EOF
-[Path]
-PathModified=$EDATA/$ANAME
-Unit=ata-$ANAME.service
-EOF
-
-		cat > $SVCDIR/ata-$ANAME.service <<EOF
-[Unit]
-Description=automatic TA service for $ANAME
-OnFailure=ata-$ANAME-tbreak.service
-After=smtp.socket
-
-[Service]
-ExecStart=$ATABIN/ata.onsub $ANAME
-WorkingDirectory=/var/orbit/email_data/$ANAME
-Type=exec
-
-EOF
-
-		cat > $SVCDIR/ata-$ANAME-tbreak.service <<EOF
-[Unit]
-Description=give $ANAME a tolerance break
-
-[Service]
-ExecStart=$ATABIN/ata.tbreak $ANAME
-WorkingDirectory=$ATABIN
-Type=exec
-
-EOF
-
-		cat > $SVCDIR/ata-$ANAME-watchdog.service <<EOF
-[Unit]
-Description=Lazily trigger restart on ata $ANAME downtime
-After=ata-$ANAME.service
-
-[Service]
-ExecStart=$ATABIN/ata.watchdog $ANAME
-WorkingDirectory=$ATABIN
-
-EOF
-fi
-
+	
 done
 
 # Install systemd services
@@ -224,6 +176,7 @@ Accept=yes
 WantedBy=sockets.target
 EOF
 
+
 # Immediately enable email servers
 systemctl enable --now smtp.socket
 systemctl enable --now pop.socket
@@ -232,22 +185,22 @@ systemctl enable --now pop.socket
 systemctl daemon-reload
 systemctl enable --now $SVCDIR/ata-*.path
 
-# Validate configuration
+# Validate email configuration
 
 systemctl is-active --quiet smtp.socket \
-	|| echo "install smtp failed"
+	|| echo "failed to install smtp"
 systemctl is-active --quiet pop.socket  \
-	|| echo "install smtp failed"
+	|| echo "failed to install pop"
 
 printf "QUIT\r\n" | netcat localhost 1465 | \
 	diff -up /dev/stdin <(printf \
 	"220 SMTP server ready\r\n221 Goodbye\r\n") \
-		|| echo "start smtp failed"
+		|| echo "failed to validate smtp"
 
 printf "QUIT\r\n" | netcat localhost 1995 | \
 	diff -up /dev/stdin <(printf \
 	"+OK POP3 server ready\r\n+OK bye\r\n") \
-		|| echo "start pop3 failed"
+		|| echo "failed to validate pop3"
 
 
 ### NGINX AND SSL
@@ -255,8 +208,6 @@ printf "QUIT\r\n" | netcat localhost 1995 | \
 # and exending into one external access
 # configuration script setting up nginx,
 # and SSL certification
-#
-
 
 SSL_RAW=$(certbot certificates -d $FQDN 2>/dev/null)
 if grep -q 'No certificates found.' <<< "$SSL_RAW"; then
@@ -275,6 +226,118 @@ if test -z "${SSL_CRT}" <<< "$SSL_RAW"; then
 	echo "no .crt file for ssl" ;
 	exit 1
 fi
+
+# install our nginx config
+
+# I can't imagine we would find nginx config somewhere else
+NGINX_CONFIG_MAIN=/etc/nginx/nginx.conf
+NGINX_CONFIG_ORBIT=/etc/nginx/conf.d/orbit.conf
+# backup old config if different (otherwise second run overwrites)
+diff $NGINX_CONFIG_MAIN $ORBIT_ROOT/nginx.conf.bak 2>&1 >/dev/null && cp $NGINX_CONFIG_MAIN $ORBIT_ROOT/nginx.conf.bak
+
+if [ "$PRODUCTION" == "True" ]; then
+DEV_BLOCK=""
+DEV_OPT=""
+else
+DEV_BLOCK="\nlocation = /devfooter {\n\tinternal;\n\treturn 200 \"<br><hr><i><b>Development Instance</b></i><hr>\";\n}\n\n"
+DEV_OPT="\n\tadd_after_body /devfooter;\n"
+fi
+
+cat > /etc/nginx/nginx.conf <<EOF
+# Main NGINX config for KDLP ORBIT
+# TODO: automated TLS configuation
+
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log notice;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+	worker_connections 1024;
+}
+
+http {
+	log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+		      '$status $body_bytes_sent "$http_referer" '
+		      '"$http_user_agent" "$http_x_forwarded_for"';
+
+	access_log  /var/log/nginx/access.log  main;
+
+	sendfile            on;
+	tcp_nopush          on;
+	keepalive_timeout   65;
+	types_hash_max_size 4096;
+
+	include             /etc/nginx/mime.types;
+	default_type        application/octet-stream;
+
+	server {
+		ssl_certificate /etc/letsencrypt/live/${FQDN}/fullchain.pem;
+		ssl_certificate_key /etc/letsencrypt/live/${FQDN}/privkey.pem;
+		server_name ${FQDN};
+		listen 443 ssl;
+		listen [::]:443 ssl;
+		include /etc/letsencrypt/options-ssl-nginx.conf;
+		ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+		include /etc/nginx/conf.d/kdlp.conf;
+	}
+	server {
+		listen 80;
+		listen [::]:80;
+		if ($host = ${FQDN}) {
+			return 301 https://$host$request_uri;
+		}
+		return 404;
+	}
+}
+include /etc/nginx/conf.d/mail.conf;
+EOF
+
+cat > /etc/nginx/conf.d/orbit.conf <<EOF
+error_page 401 /login?target=$uri;
+error_page 403 /403.md;
+error_page 404 /404.md;
+error_page 502 /502.md;
+error_page 502 /502.md;
+error_page 500 /500.md;
+
+# DOCUMENT ROOT
+location / {
+    root /var/orbit/docs;
+}
+
+# MATRIX
+location /.well-known/matrix/client {
+	return 200 '{"m.homeserver": {"base_url": "https://${FQDN}:${MATRIX_PORT}"}}';
+	default_type application/json;
+	add_header Access-Control-Allow-Origin *;
+}
+
+}
+${DEV_BLOCK}
+location = / {
+    rewrite .* /index.md;
+}
+
+# RADIUS
+location ~* ^((?!/cgit)(.*\.md)|/log(in|out)|/dashboard|/register|)$ {
+	include uwsgi_params;
+	proxy_pass http://localhost:@@RADIUS_PORT@@;
+${DEV_OPT}}
+
+# CGIT TODO
+location ~* /cgit(.*) {
+	include fastcgi_params;
+
+	fastcgi_param SCRIPT_FILENAME /var/www/cgi-bin/cgit;
+	fastcgi_param PATH_INFO $1;
+
+	fastcgi_pass localhost:7070;
+}
+EOF
 
 cat > /etc/nginx/conf.d/mail.conf <<EOF
 mail {
@@ -301,8 +364,3 @@ mail {
 	}
 }
 EOF
-
-MAIL_CONF="include /etc/nginx/conf.d/mail.conf;"
-if ! grep -q "^$MAIL_CONF$" /etc/nginx/nginx.conf; then
-	echo "$MAIL_CONF" >> /etc/nginx/nginx.conf
-fi
