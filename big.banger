@@ -1,0 +1,3 @@
+#!/bin/bash
+
+bash big.bang 2>&1 | tee -a big.log

@@ -510,7 +510,7 @@ def handle_logout(rocket):
     return rocket.respond(HTTPStatus.OK, 'text/html', form_logout)
 
 def handle_dashboard(rocket):
-    return rocket.respond(HTTPStatus.OK, 'text/html', dash.dash(rocket.user))
+    return handle_stub(rocket, ['dashboard in development, check back later'])
 
 def handle_stub(rocket, more=[]):
         mk_cont = lambda meth_path: f'<h3>Developmennt sub for {meth_path} </h3>{"".join(more)}'
