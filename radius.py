@@ -91,7 +91,8 @@ mk_msgfmt = lambda     kv, i=0: mk_code(('{} = {} <br />').format(*kv), i)
 mk_msgblk = lambda b, kvs, i=0: b + ''.join([mk_msgfmt(kv, i) for kv in kvs]) + b
 _stylefmt = '<link rel="stylesheet" type="text/css" href="{}"/>'
 mk_style  = lambda         i=0: mk_t(_stylefmt.format(cfg.style_get), i)
-mk_navbt  =  lambda  h, t, i=0: mk_a(t, h, 'nav')
+mk_navbt  =  lambda  h, t, i=0: mk_a(t, h, 'nav-btn')
+mk_curbt  =  lambda  h, t, i=0: mk_a(t, h, 'cur-btn')
 
 # === user session handling === 
 
@@ -353,7 +354,7 @@ class Rocket:
                 return False
         return True
 
-    def format_html(self, doc):
+    def format_html(self, doc, current = 'Home'):
         # generate a reproduction of the original header without too much abstraction for initial version
 
         # general constants
@@ -361,13 +362,12 @@ class Rocket:
         # Prepare logo
         logo_div_doc  = ''
         logo_div_doc += mk_img(cfg.logo_get, '[KDLP] logo', 'kdlp_logo')
-        logo_div_doc += mk_h('1', cfg.title, 'title')
         logo_div_gen  =  lambda: mk_div('logo', logo_div_doc)
 
         # Prepare nav
         nav_kvs = cfg.nav_buttons
-        nav_btn_gen =    lambda: ''.join([mk_navbt(pair[1], pair[0]) for pair in nav_kvs])
-        nav_div_gen =    lambda: f'<hr />{mk_div("nav", nav_btn_gen())}{mk_sep()}\n'
+        nav_btn_gen =    lambda: ''.join([mk_navbt(pair[1], pair[0]) if pair[1] != current else mk_curbt(pair[1], pair[0]) for pair in nav_kvs])
+        nav_div_gen =    lambda: f'{mk_div("nav", nav_btn_gen())}\n'
 
         # loads cookie if exists
         self.session
@@ -385,8 +385,10 @@ class Rocket:
         output += mk_chrset()
         output += logo_div_gen()
         output += nav_div_gen()
+        output += '<div id=\'site-body\'>'
         output += doc
         output += mk_msgblk(mk_sep(), msgdoc)
+        output += '</div>'
 
         return output
 
