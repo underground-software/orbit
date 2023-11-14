@@ -353,11 +353,11 @@ class Rocket:
             case _:
                 return False
         return True
-
-    def format_html(self, doc, current = 'Home'):
+    def format_html(self, doc):
         # generate a reproduction of the original header without too much abstraction for initial version
 
         # general constants
+        is_home = lambda path, text: text.lower() == 'home' and (path == '/' or path.startswith('/index'))
 
         # Prepare logo
         logo_div_doc  = ''
@@ -366,8 +366,14 @@ class Rocket:
 
         # Prepare nav
         nav_kvs = cfg.nav_buttons
-        nav_btn_gen =    lambda: ''.join([mk_navbt(pair[1], pair[0]) if pair[1] != current else mk_curbt(pair[1], pair[0]) for pair in nav_kvs])
-        nav_div_gen =    lambda: f'{mk_div("nav", nav_btn_gen())}\n'
+        nav_btns = ''
+        for pair in nav_kvs:
+            if self.path_info.startswith('/' + pair[1].lower()) or is_home(self.path_info, pair[1]):
+                nav_btns += mk_curbt(pair[1], pair[0])
+            else:
+                nav_btns += mk_navbt(pair[1], pair[0])
+
+        nav_div_gen =    lambda: f'{mk_div("nav", nav_btns)}\n'
 
         # loads cookie if exists
         self.session
