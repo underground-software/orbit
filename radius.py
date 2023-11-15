@@ -87,6 +87,7 @@ mk_tbl  = lambda    l, s=cdfl, i=0: mk_tblock("<table>", _tbhelp(l, s, i), "</ta
 # compound HTML makers
 mk_sep    = lambda         i=0: mk_t(f'<hr />', i)
 mk_chrset = lambda         i=0: mk_t('<meta charset="UTF-8">', i)
+mk_vwport = lambda         i=0: mk_t('<meta name="viewport" content="width=device-width, initial-scale=1.0">', i)
 mk_msgfmt = lambda     kv, i=0: mk_code(('{} = {} <br />').format(*kv), i)
 mk_msgblk = lambda b, kvs, i=0: b + ''.join([mk_msgfmt(kv, i) for kv in kvs]) + b
 _stylefmt = '<link rel="stylesheet" type="text/css" href="{}"/>'
@@ -389,6 +390,7 @@ class Rocket:
         output = ''
         output += mk_style()
         output += mk_chrset()
+        output += mk_vwport()
         output += logo_div_gen()
         output += nav_div_gen()
         output += '<div id=\'site-body\'>'
