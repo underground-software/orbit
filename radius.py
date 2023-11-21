@@ -259,6 +259,7 @@ class Rocket:
         self.queries   = parse_qs(self.env.get("QUERY_STRING", ""))
         self._session   = None
         self._msg       = "(silence)"
+        # list of tuple string pairs to reutrn as HTTP response headers
         self.headers   = []
         # enable page formatter selection
         # right now we just make the header and footer for HTML
@@ -272,10 +273,8 @@ class Rocket:
     def __str__(self):
         return repr(self)
 
-
     def msg(self, msg):
         self._msg = msg
-
 
     def len_body(self):
         return int(self.env.get('CONTENT_LENGTH', "0"))
@@ -283,7 +282,6 @@ class Rocket:
     @property
     def method(self):
         return self.env.get('REQUEST_METHOD', "GET")
-
 
     # when we use a session, check if the user supplied a token for
     # an existing session and act quietly load it if so
@@ -510,7 +508,7 @@ def handle_dashboard(rocket):
     return handle_stub(rocket, ['dashboard in development, check back later'])
 
 def handle_stub(rocket, more=[]):
-        mk_cont = lambda meth_path: f'<h3>Developmennt sub for {meth_path} </h3>{"".join(more)}'
+        mk_cont = lambda meth_path: f'<h3>Development stub for {meth_path} </h3>{"".join(more)}'
         meth_path = f'{rocket.method} {rocket.path_info}'
         return rocket.respond(HTTPStatus.OK, 'text/html', mk_cont(meth_path))
 
