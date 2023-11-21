@@ -158,7 +158,6 @@ class Session:
             if (res := queries.get('token', None)):
                 pass
             elif (raw := env.get("HTTP_COOKIE", None)):
-                print("RAWWW", raw)
                 cok = cookies.BaseCookie('')
                 cok.load(raw)
                 res  = cok.get('auth', cookies.Morsel()).value
