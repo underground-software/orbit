@@ -7,7 +7,7 @@ import markdown, os, re
 import sys, bcrypt, hashlib
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs
-import sqlite3, html
+import html
 import config as cfg
 import db
 
