@@ -152,7 +152,7 @@ FROM submissions
 WHERE student_id = ?
 AND assignment_id = ?;
 """.strip()
-sub_getfor_username_asn = lambda dub: _get(SUB_GETFOR_USERNAMEASN, p)
+sub_getfor_username_asn = lambda dub: _get(SUB_GETFOR_USERNAMEASN, dub)
 
 SUBS_GET="""
 SELECT *
@@ -171,14 +171,14 @@ SELECT sub_id, username, timestamp, _from, _to, email_ids, subjects
 FROM submissions
 WHERE sub_id = ?;
 """.strip()
-sub_getby_subid         = lambda sid: _get(SUB_GETBY_SUBID, (sid))
+sub_getby_subid         = lambda sid: _get(SUB_GETBY_SUBID, (sid,))
 
 SUB_GETBY_USERNAME="""
 SELECT sub_id, username, timestamp, _from, _to, email_ids, subjects
 FROM submissions
 WHERE user = ?;
 """.strip()
-sub_getby_username      = lambda usr: _get(SUB_GETBY_USERNAME, (usr))
+sub_getby_username      = lambda usr: _get(SUB_GETBY_USERNAME, (usr,))
 
 # assignment table interface
 
@@ -187,14 +187,14 @@ SELECT web_id, email_id
 FROM assignments
 WHERE web_id = ?;
 """.strip()
-asn_getby_webid         = lambda wid: _get(ASN_GETBY_WEBID, (web_id))
+asn_getby_webid         = lambda wid: _get(ASN_GETBY_WEBID, (web_id,))
 
 ASN_GETBY_EMAILID="""
 SELECT web_id, email_id
 FROM assignments
 WHERE email_id = ?;
 """.strip()
-asn_getby_email_id      = lambda eid: _get(ASN_GETBY_EMAIL_ID, (eid))
+asn_getby_email_id      = lambda eid: _get(ASN_GETBY_EMAIL_ID, (eid,))
 
 ASN_GET="""
 SELECT *
@@ -208,17 +208,17 @@ REG_INS="""
 INSERT VALUES username, password, student_id = (?,?,?)
 INTO accounts;
 """.strip()
-reg_ins                 = lambda tpl: _set(REG_INS, (tpl))
+reg_ins                 = lambda tpl: _set(REG_INS, tpl)
 
 REG_GETBY_STUID="""
 SELECT registration_id, username, password
 FROM newusers
 WHERE student_id = ?;
 """.strip()
-reg_getby_stuid         = lambda sid: _set(REG_GETBY_STUDENTID, (sid))
+reg_getby_stuid         = lambda sid: _set(REG_GETBY_STUDENTID, (sid,))
 
 REG_DELBY_REGID="""
 DELETE FROM accounts
 WHERE id = ?;
 """.strip()
-reg_delby_regid         = lambda rid: _get(REG_DEL_BY_REGISRATION_ID, (rid))
+reg_delby_regid         = lambda rid: _get(REG_DEL_BY_REGISRATION_ID, (rid,))
