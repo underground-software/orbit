@@ -154,7 +154,7 @@ AND assignment_id = ?;
 """.strip()
 sub_getfor_username_asn = lambda dub: _get(SUB_GETFOR_USERNAMEASN, dub)
 
-SUBS_GET="""
+SUB_GET="""
 SELECT *
 FROM submissions;
 """.strip()
