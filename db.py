@@ -152,7 +152,7 @@ FROM submissions
 WHERE student_id = ?
 AND assignment_id = ?;
 """.strip()
-sub_getfor_username_asn = lambda dub: _get(SUB_GETFOR_USERNAMEASN, dub)
+sub_getfor_username_asn = lambda dub: _get(SUB_GETFOR_USERNAME_ASN, dub)
 
 SUB_GET="""
 SELECT *
