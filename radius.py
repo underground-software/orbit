@@ -7,7 +7,7 @@ import markdown, os, re
 import sys, bcrypt, hashlib
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs
-import sqlite3, html
+import html
 import config as cfg
 import db
 
@@ -168,7 +168,8 @@ class Session:
 
     def extend(self):
         if self.valid():
-            db.ses_setexpiry((gen_tok_expiry(), self.token))
+            self.expiry = datetime.utcnow() + timedelta(minutes=min_per_ses)
+            db.ses_setexpiry_token((self.expiry.timestamp(), self.token))
 
     def end(self):
         return db.ses_delby_token(self.token)
