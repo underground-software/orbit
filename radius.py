@@ -10,6 +10,7 @@ from urllib.parse import parse_qs
 import html
 import config as cfg
 import db
+import subprocess
 
 sec_per_min = 60
 min_per_ses = cfg.ses_mins
@@ -517,6 +518,15 @@ def handle_stub(rocket, more=[]):
 def handle_register(rocket):
     return handle_stub(rocket, [f'<code><br />{_OLD_NOTES}</code><br />'])
 
+def handle_cgit(rocket):
+    cgit_env = os.environ.copy()
+    cgit_env['PATH_INFO'] = rocket.path_info.split('/cgit')[1]
+    proc = subprocess.Popen(['/var/www/cgi-bin/cgit'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=cgit_env)
+    so, se = proc.communicate()
+    outstring = str(so, 'UTF-8')
+    outstring = outstring.split('\n\n', 1)[1]
+    return rocket.respond(HTTPStatus.OK, 'text/html', outstring)
+
 # TODO: use this to implement register
 _OLD_NOTES="""
 	form_data = parse_qs(env['wsgi.input'].read(int(env['CONTENT_LENGTH'])))
@@ -562,5 +572,7 @@ def application(env, SR):
         return handle_dashboard(rocket)
     elif re.match("^/register", rocket.path_info):
         return handle_register(rocket)
+    elif re.match("^/cgit", rocket.path_info):
+        return handle_cgit(rocket)
     else:
         return handle_try_md(rocket)

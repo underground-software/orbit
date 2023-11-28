@@ -87,22 +87,11 @@ http {
 		}
 
 		# RADIUS
-		location ~* ^((?!/cgit)(.*\.md)|/log(in|out)|/dashboard|/register|/mail_auth)$ {
+		location ~* ^((.*\.md)|/log(in|out)|/dashboard|/register|/mail_auth|/cgit.*)$ {
 			include uwsgi_params;
 			proxy_pass http://localhost:$RADIUS_PORT;
 			$DEV_OPT
 		}
-
-		# CGIT TODO
-		location ~* /cgit(.*) {
-			include fastcgi_params;
-
-			fastcgi_param SCRIPT_FILENAME /var/www/cgi-bin/cgit;
-			fastcgi_param PATH_INFO \$1;
-
-			fastcgi_pass localhost:7070;
-		}
-
 	}
 	server {
 		listen 80;
