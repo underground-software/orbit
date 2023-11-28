@@ -93,7 +93,7 @@ _stylefmt = '<link rel="stylesheet" type="text/css" href="{}"/>'
 mk_style  = lambda         i=0: mk_t(_stylefmt.format(cfg.style_get), i)
 mk_navbt  =  lambda  h, t, i=0: mk_a(t, h, 'nav')
 
-# === user session handling === 
+# === user session handling ===
 
 class Session:
     """
@@ -106,7 +106,7 @@ class Session:
 
     Attributes
     ----------
-    
+
     username : string
         The authenticated  username if self.valid()
         None otherwise
@@ -552,9 +552,9 @@ def handle_try_md(rocket):
 def application(env, SR):
     rocket = Rocket(env, SR)
     if re.match("^/login", rocket.path_info):
-        return handle_login(rocket)   
+        return handle_login(rocket)
     elif re.match("^/logout", rocket.path_info):
-        return handle_logout(rocket)   
+        return handle_logout(rocket)
     elif re.match("^/mail_auth", rocket.path_info):
         return handle_mail_auth(rocket)
     elif re.match("^/dashboard", rocket.path_info):
