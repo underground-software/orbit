@@ -438,7 +438,7 @@ form_login="""
 
 form_logout="""
 <head>
-  <meta http-equiv="Refeesh" content="0; URL=/login" />
+  <meta http-equiv="Refresh" content="0; URL=/login" />
 </head>
 """
 
