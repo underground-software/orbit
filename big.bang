@@ -92,6 +92,9 @@ Description=Orbit frontend HTML server
 [Service]
 WorkingDirectory=$ORBIT_ROOT
 ExecStart=uwsgi $ORBIT_ROOT/radius.ini
+
+[Install]
+WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable --now radius
