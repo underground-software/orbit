@@ -1,0 +1,6 @@
+#!/bin/sh -e
+SMTP_PORT="$(/orbit/config.py smtp_port)"
+EMAIL_DIR="$(/orbit/config.py email_dir)"
+s6-setuidgid mail \
+  s6-tcpserver 127.0.0.1 "$SMTP_PORT" \
+    /orbit/smtp/smtp "$EMAIL_DIR"

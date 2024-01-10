@@ -31,3 +31,4 @@ INSERT INTO assignments (web_id, email_id) VALUES ('P1', 'programming1');
 INSERT INTO assignments (web_id, email_id) VALUES ('P2', 'programming2');
 INSERT INTO assignments (web_id, email_id) VALUES ('F0', 'final0');
 INSERT INTO assignments (web_id, email_id) VALUES ('F1', 'final1');
+COMMIT;

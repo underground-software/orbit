@@ -294,7 +294,7 @@ http {
 		listen [::]:443 ssl;
 		include /etc/letsencrypt/options-ssl-nginx.conf;
 		ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-		error_page 401 /login?target=$uri;
+		error_page 401 /login?target=\$uri;
 		error_page 403 /403.md;
 		error_page 404 /404.md;
 		error_page 502 /502.md;
@@ -338,7 +338,7 @@ http {
 		listen 80;
 		listen [::]:80;
 		if (\$host = ${FQDN}) {
-			return 301 https://$host$request_uri;
+			return 301 https://\$host\$request_uri;
 		}
 		return 404;
 	}
