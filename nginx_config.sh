@@ -1,20 +1,26 @@
 #!/bin/sh -e
 cd "$(dirname "$0")"
 
-FQDN=$(./config.py srvname)
-RADIUS_PORT=$(./config.py radius_port)
-SMTP_PORT=$(./config.py smtp_port)
-SMTP_PORT_EXT=$(./config.py smtp_port_ext)
-POP3_PORT=$(./config.py pop3_port)
-POP3_PORT_EXT=$(./config.py pop3_port_ext)
+FQDN="$(./config.py srvname)"
+DATAROOT="$(./config.py dataroot)"
+RADIUS_PORT="$(./config.py radius_port)"
+SMTP_PORT="$(./config.py smtp_port)"
+SMTP_PORT_EXT="$(./config.py smtp_port_ext)"
+POP3_PORT="$(./config.py pop3_port)"
+POP3_PORT_EXT="$(./config.py pop3_port_ext)"
 
-SSL_RAW=$(certbot certificates -d $FQDN)
-SSL_CRT=$(printf "$SSL_RAW" | awk -F': ' '/Certificate Path/ { print $2 }')
-SSL_KEY=$(printf "$SSL_RAW" | awk -F': ' '/Private Key Path/ { print $2 }')
+# Make this script easy to run on a host machine without certbot
+if ! hash certbot; then
+	alias certbot=true
+fi
 
-PRODUCTION=$(./config.py production)
+SSL_RAW="$(certbot certificates -d "$FQDN")"
+SSL_CRT="$(printf "$SSL_RAW" | awk -F': ' '/Certificate Path/ { print $2 }')"
+SSL_KEY="$(printf "$SSL_RAW" | awk -F': ' '/Private Key Path/ { print $2 }')"
 
-if [ -z "$PRODUCTION" ]; then
+PRODUCTION="$(./config.py production)"
+
+if [ "$PRODUCTION" = "False" ]; then
 	DEV_BLOCK=$(echo -e "\n\t\tlocation = /devfooter {\n\t\t\tinternal;\n\t\t\treturn 200 \"<br><hr><i><b>Development Instance</b></i><hr>\";\n\t\t}\n\n\n")
 	DEV_OPT=$(echo -e "\t\tadd_after_body /devfooter;\n\t\t")
 fi
@@ -66,7 +72,7 @@ http {
 
 		# DOCUMENT ROOT
 		location / {
-		    root /var/orbit/docs;
+		    root $DATAROOT;
 		}
 
 		# MATRIX
