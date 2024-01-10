@@ -31,7 +31,7 @@ WORKDIR /orbit
 RUN make -C pop3 clean all && \
     make -C smtp clean all && \
     EMAIL_DIR="$(./config.py email_dir)" && \
-    mkdir -p "$EMAIL_DIR"/{mail,logs} && \
+    mkdir -p "$EMAIL_DIR"/mail "$EMAIL_DIR"/logs && \
     chown -R mail:mail "$EMAIL_DIR"
 
 # Setup orbit db
