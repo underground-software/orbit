@@ -10,6 +10,7 @@ RUN mkdir /etc/letsencrypt && \
 # Install build deps
 RUN apk update && apk upgrade && apk add \
     build-base     \
+    libffi-dev     \
     python3-dev    \
     py3-pip        \
     clang          \
