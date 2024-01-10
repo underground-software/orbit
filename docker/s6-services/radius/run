@@ -1,0 +1,3 @@
+#!/bin/sh -e
+source /radius-venv/bin/activate
+uwsgi --master /orbit/radius.ini
