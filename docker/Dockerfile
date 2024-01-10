@@ -62,4 +62,6 @@ COPY --from=build /etc/letsencrypt /etc/letsencrypt
 COPY --from=build /orbit /orbit
 COPY --from=build /radius-venv /radius-venv
 
+HEALTHCHECK CMD /orbit/docker/healthcheck.sh
+
 CMD /orbit/docker/init.sh
