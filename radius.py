@@ -398,7 +398,7 @@ class Rocket:
                 self.parse_content_type('text/plain')
                 code = HTTPStatus.INTERNAL_SERVER_ERROR
                 document = 'ERROR: BAD RADIUS CONTENT DESCRIPTION'
-        print(f'respond {code.phrase} {self.headers} {document}')
+        # print(f'respond {code.phrase} {self.headers} {document}')
         self._start_res(f'{code.value} {code.phrase}', self.headers)
         return [encode(document)]
 
@@ -473,6 +473,7 @@ def handle_login(rocket):
             makeme = lambda: mk_form_welcome(rocket.session)
         else:
             rocket.msg(f'authentication failure')
+            return rocket.respond(HTTPStatus.UNAUTHORIZED, 'text/html', makeme())
     else:
         rocket.msg('welcome, please login')
     return rocket.respond(HTTPStatus.OK, 'text/html', makeme())

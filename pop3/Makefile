@@ -9,4 +9,4 @@ all: pop3
 pop3: pop3.c
 	$(CC) $(CFLAGS) -o $@ $^
 clean:
-	-rm pop3
+	rm -f pop3
