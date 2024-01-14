@@ -332,7 +332,7 @@ class Rocket:
         output += '<hr>\n'
         output += f'<code>msg = {self._msg}</code><br>\n'
         output += f'<code>whoami  = {self.username}</code><br>\n'
-        output += f'<code>{config.appname} {config.version} {config.source}</code>\n'
+        output += f'<code>{config.appname} {config.version} {"in development" if not config.production else ""} {config.source}</code>\n'
         output += '<hr>\n'
 
         output += '</body>\n'
