@@ -305,6 +305,7 @@ class Rocket:
         # header: metadata
         output += f'<link rel="stylesheet" type="text/css" href="{config.style_get}"/>'
         output += f'<meta charset="UTF-8">'
+        output += f'<meta name="viewport" content="width=device-width, initial-scale=1.0">'
 
         # header: logo and title
         output += f'<div class="kdlp_logo">'
