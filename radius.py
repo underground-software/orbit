@@ -350,7 +350,7 @@ class Rocket:
                 self.parse_content_type('text/plain')
                 code = HTTPStatus.INTERNAL_SERVER_ERROR
                 document = 'ERROR: BAD RADIUS CONTENT DESCRIPTION'
-        # print(f'respond {code.phrase} {self.headers} {document}')
+        # print(f'respond {code.phrase} {self.headers} /document}')
         self._start_res(f'{code.value} {code.phrase}', self.headers)
         return [encode(document)]
 
@@ -414,21 +414,21 @@ form_register="""
 """.strip()
 
 def handle_login(rocket):
-    makeme = lambda: form_login
+    generate_response_document = lambda: form_login
     if rocket.session:
-        makeme = lambda : mk_form_welcome(rocket.session)
+        generate_response_document = lambda : mk_form_welcome(rocket.session)
         rocket.msg(f'{rocket.username} authenticated by token')
-        return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
+        return rocket.respond(HTTPStatus.OK, 'text/html', generate_response_document())
     if rocket.method == "POST":
         if rocket.launch():
             rocket.msg(f'{rocket.username} authenticated by password')
-            makeme = lambda: mk_form_welcome(rocket.session)
+            generate_response_document = lambda: mk_form_welcome(rocket.session)
         else:
             rocket.msg(f'authentication failure')
-            return rocket.respond(HTTPStatus.UNAUTHORIZED, 'text/html', makeme())
+            return rocket.respond(HTTPStatus.UNAUTHORIZED, 'text/html', generate_response_document())
     else:
         rocket.msg('welcome, please login')
-    return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
+    return rocket.respond(HTTPStatus.OK, 'text/html', generate_response_document())
 
 def handle_mail_auth(rocket):
     # This should be invariant when ngninx is configured properly
