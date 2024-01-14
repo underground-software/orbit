@@ -473,6 +473,7 @@ def handle_login(rocket):
             makeme = lambda: mk_form_welcome(rocket.session)
         else:
             rocket.msg(f'authentication failure')
+            return rocket.respond(HTTPStatus.UNAUTHORIZED, 'text/html', makeme())
     else:
         rocket.msg('welcome, please login')
     return rocket.respond(HTTPStatus.OK, 'text/html', makeme())
