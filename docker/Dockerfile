@@ -25,6 +25,8 @@ RUN python3 -m venv /radius-venv && \
     source /radius-venv/bin/activate && \
     pip install -r /pip.deps
 
+COPY cgitrc /etc/cgitrc
+
 COPY . /orbit
 WORKDIR /orbit
 
@@ -56,10 +58,12 @@ RUN apk update && apk upgrade && apk add \
     sqlite         \
     netcat-openbsd \
     curl           \
+    cgit           \
     git
 
 COPY --from=build /etc/nginx /etc/nginx
 COPY --from=build /etc/letsencrypt /etc/letsencrypt
+COPY --from=build /etc/cgitrc /etc/cgitrc
 COPY --from=build /orbit /orbit
 COPY --from=build /radius-venv /radius-venv
 

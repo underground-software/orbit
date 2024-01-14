@@ -521,7 +521,7 @@ def handle_register(rocket):
 def handle_cgit(rocket):
     cgit_env = os.environ.copy()
     cgit_env['PATH_INFO'] = rocket.path_info.split('/cgit')[1]
-    proc = subprocess.Popen(['/var/www/cgi-bin/cgit'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=cgit_env)
+    proc = subprocess.Popen(['/usr/share/webapps/cgit/cgit'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=cgit_env)
     so, se = proc.communicate()
     outstring = str(so, 'UTF-8')
     outstring = outstring.split('\n\n', 1)[1]
