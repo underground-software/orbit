@@ -1,0 +1,11 @@
+
+module email 1.0;
+
+require {
+	type var_t;
+	type init_t;
+	class file { execute open read write execute_no_trans link getattr setattr };
+}
+
+#============= init_t ==============
+allow init_t var_t:file { execute open read write execute_no_trans link getattr setattr };

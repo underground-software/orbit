@@ -1,5 +1,4 @@
 CC = clang
-SRVNAME ?= $(shell ../config.py srvname)
 CFLAGS = -std=c2x -Weverything -Wno-unsafe-buffer-usage -Wno-c++98-compat -Wno-gnu-designator \
 	-Wno-initializer-overrides -Wno-declaration-after-statement -Wno-four-char-constants \
 	-Wno-pre-c2x-compat -D_GNU_SOURCE -DHOSTNAME='"$(SRVNAME)"'
@@ -8,9 +7,12 @@ CFLAGS = -std=c2x -Weverything -Wno-unsafe-buffer-usage -Wno-c++98-compat -Wno-g
 all: smtp
 
 smtp: smtp.c
+ifndef SRVNAME
+	$(error "you must pass SRVNAME=<FQDN>")
+endif
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f smtp
+	-rm smtp
 
 
