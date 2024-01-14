@@ -56,9 +56,9 @@ http {
 	default_type        application/octet-stream;
 
 	server {
-		ssl_certificate /etc/letsencrypt/live/${FQDN}/fullchain.pem;
-		ssl_certificate_key /etc/letsencrypt/live/${FQDN}/privkey.pem;
-		server_name ${FQDN};
+		ssl_certificate /etc/letsencrypt/live/$FQDN/fullchain.pem;
+		ssl_certificate_key /etc/letsencrypt/live/$FQDN/privkey.pem;
+		server_name $FQDN;
 		listen 443 ssl;
 		listen [::]:443 ssl;
 		include /etc/letsencrypt/options-ssl-nginx.conf;
@@ -77,11 +77,11 @@ http {
 
 		# MATRIX
 		location /.well-known/matrix/client {
-			return 200 '{"m.homeserver": {"base_url": "https://${FQDN}:${MATRIX_PORT}"}}';
+			return 200 '{"m.homeserver": {"base_url": "https://$FQDN:$MATRIX_PORT"}}';
 			default_type application/json;
 			add_header Access-Control-Allow-Origin *;
 		}
-		${DEV_BLOCK}
+		$DEV_BLOCK
 		location = / {
 		    rewrite .* /index.md;
 		}
@@ -90,7 +90,8 @@ http {
 		location ~* ^((?!/cgit)(.*\.md)|/log(in|out)|/dashboard|/register|/mail_auth)$ {
 			include uwsgi_params;
 			proxy_pass http://localhost:$RADIUS_PORT;
-		${DEV_OPT}}
+			$DEV_OPT
+		}
 
 		# CGIT TODO
 		location ~* /cgit(.*) {
@@ -106,7 +107,7 @@ http {
 	server {
 		listen 80;
 		listen [::]:80;
-		if (\$host = ${FQDN}) {
+		if (\$host = $FQDN) {
 			return 301 https://\$host\$request_uri;
 		}
 		return 404;
