@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -std=c2x -Weverything -Wno-unsafe-buffer-usage -Wno-c++98-compat -Wno-gnu-designator -Wno-gnu-case-range -Wno-initializer-overrides -Wno-declaration-after-statement -Wno-four-char-constants -Wno-pre-c2x-compat -D_GNU_SOURCE
+CFLAGS = -std=c2x -Weverything -Wno-unsafe-buffer-usage -Wno-c++98-compat -Wno-gnu-designator -Wno-gnu-case-range -Wno-initializer-overrides -Wno-declaration-after-statement -Wno-four-char-constants -Wno-pre-c2x-compat -D_GNU_SOURCE -Wno-disabled-macro-expansion
 #CFLAGS += -DDEBUG -Og -g
 
 .PHONY: all clean
