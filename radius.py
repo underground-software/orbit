@@ -2,18 +2,16 @@
 #
 # it's all one things now
 
+import bcrypt, hashlib, html, markdown, os, re, subprocess, sys
 from http import HTTPStatus, cookies
-import markdown, os, re
-import sys, bcrypt, hashlib
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs
-import html
-import config as cfg
-import db
-import subprocess
+
+# internal
+import config, db
 
 sec_per_min = 60
-min_per_ses = cfg.ses_mins
+min_per_ses = config.ses_mins
 
 # utilities
 
@@ -305,19 +303,19 @@ class Rocket:
 
         output = ''
         # header: metadata
-        output += f'<link rel="stylesheet" type="text/css" href="{cfg.style_get}"/>'
+        output += f'<link rel="stylesheet" type="text/css" href="{config.style_get}"/>'
         output += f'<meta charset="UTF-8">'
 
         # header: logo and title
         output += f'<div class="kdlp_logo">'
-        output += f'<img src="{cfg.logo_get}" alt="[KDLP] logo" class="kdlp_logo" />'
-        output += f'<h1 class="title">{cfg.title}</h1>'
+        output += f'<img src="{config.logo_get}" alt="[KDLP] logo" class="kdlp_logo" />'
+        output += f'<h1 class="title">{config.title}</h1>'
         output += f'</div>'
 
         # header: navigation bar
         output += f'<hr />'
         output += f'<div class="nav">'
-        output += ''.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>' for pair in cfg.nav_buttons])
+        output += ''.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>' for pair in config.nav_buttons])
         output += f'</div>'
         output += f'<hr />'
 
@@ -328,9 +326,9 @@ class Rocket:
         msgdoc  = []
         msgdoc += [(    'msg',  self._msg)]
         msgdoc += [('whoami',   self.username)]
-        msgdoc += [('appname',  cfg.appname)]
-        msgdoc += [('version',  cfg.version)]
-        msgdoc += [('source',   cfg.source)]
+        msgdoc += [('appname',  config.appname)]
+        msgdoc += [('version',  config.version)]
+        msgdoc += [('source',   config.source)]
 
         output += '<hr />'
         output += ''.join([f'<code>{key} = {value} <br /></code>' for key, value in msgdoc])
@@ -503,7 +501,7 @@ def handle_md(rocket, md_path):
         return rocket.respond(HTTPStatus.OK, 'text/html', content)
 
 def handle_try_md(rocket):
-    md_path = f'{cfg.dataroot}{rocket.path_info}'
+    md_path = f'{config.dataroot}{rocket.path_info}'
     if re.match("^(?!/cgit)(.*\.md)$", rocket.path_info) and os.access(md_path, os.R_OK):
         return handle_md(rocket, md_path)
     else:
