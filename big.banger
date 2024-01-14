@@ -1,9 +1,0 @@
-#!/bin/bash
-#
-# big.banger: logging wrapper for big.bang
-
-export SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-LOG=$SCRIPT_DIR/big.log
-
-[ ! -f "$LOG" ] && touch $LOG || mv $LOG $LOG.$(date +%s)
-bash big.bang 2>&1 | tee big.log
