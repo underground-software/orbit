@@ -28,7 +28,7 @@ style_get   = '/style.css'
 orbit_root   = '/orbit'
 
 # read these documents from a filesystem path
-dataroot    = f'{orbit_root}/docs'
+doc_root    = f'{orbit_root}/docs'
 database    = f'{orbit_root}/orbit.db'
 
 email_dir   = f'{orbit_root}/email'

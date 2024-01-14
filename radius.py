@@ -501,7 +501,7 @@ def handle_md(rocket, md_path):
         return rocket.respond(HTTPStatus.OK, 'text/html', content)
 
 def handle_try_md(rocket):
-    md_path = f'{config.dataroot}{rocket.path_info}'
+    md_path = f'{config.doc_root}{rocket.path_info}'
     if re.match("^(?!/cgit)(.*\.md)$", rocket.path_info) and os.access(md_path, os.R_OK):
         return handle_md(rocket, md_path)
     else:

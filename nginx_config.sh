@@ -2,7 +2,7 @@
 cd "$(dirname "$0")"
 
 FQDN="$(./config.py srvname)"
-DATAROOT="$(./config.py dataroot)"
+DOC_ROOT="$(./config.py doc_root)"
 RADIUS_PORT="$(./config.py radius_port)"
 SMTP_PORT="$(./config.py smtp_port)"
 SMTP_PORT_EXT="$(./config.py smtp_port_ext)"
@@ -72,7 +72,7 @@ http {
 
 		# DOCUMENT ROOT
 		location / {
-		    root $DATAROOT;
+		    root $DOC_ROOT;
 		}
 
 		# MATRIX
