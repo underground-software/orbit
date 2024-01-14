@@ -18,7 +18,7 @@ min_per_ses = config.ses_mins
 encode    = lambda dat: bytes(dat, "UTF-8")
 decode    = lambda dat: str(dat, "UTF-8")
 
-def mk_table(row_list, html_class, indentation_level=0):
+def mk_table(row_list, indentation_level=0):
     # Create <th> elements in first row, and <td> elements afterwards
     first_row = True
     indenter = lambda adjustment: '\t' * (indentation_level + adjustment)
@@ -89,7 +89,7 @@ class Session:
         self.expiry     = None
 
 
-    # initialize session from username and add new record
+        # initialize session from username and add new record
         if username:
             self.username   = username
             self.token      = self.mk_hash(username)
@@ -98,17 +98,14 @@ class Session:
                 db.ses_delby_username(username)
             db.ses_ins((self.token, self.username, self.expiry_ts()))
         else:
-            # query overrides cookie
-            if (res := queries.get('token', None)):
-                pass
-            elif (raw := env.get("HTTP_COOKIE", None)):
+            if (raw := env.get("HTTP_COOKIE", None)):
                 cok = cookies.BaseCookie('')
                 cok.load(raw)
-                res  = cok.get('auth', cookies.Morsel()).value
-            if (ses_found := db.ses_getby_token(res)[0]):
-                self.token      = ses_found[0]
-                self.username   = ses_found[1]
-                self.expiry     = datetime.fromtimestamp(ses_found[2])
+                res = cok.get('auth', cookies.Morsel()).value
+                if (ses_found := db.ses_getby_token(res)[0]):
+                    self.token      = ses_found[0]
+                    self.username   = ses_found[1]
+                    self.expiry     = datetime.fromtimestamp(ses_found[2])
 
     def extend(self):
         if self.valid():
