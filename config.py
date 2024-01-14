@@ -24,6 +24,9 @@ matrix_port = '8448'
 logo_get    = '/images/kdlp_logo.png'
 style_get   = '/style.css'
 
+# HTML title: keeping it simple and static for now
+title       = "KDLP"
+
 # this is also hard-coded in many files
 orbit_root   = '/orbit'
 

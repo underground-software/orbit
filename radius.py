@@ -296,44 +296,47 @@ class Rocket:
         return True
 
     def format_html(self, doc):
-        # generate a reproduction of the original header without too much abstraction for initial version
-
         # loads cookie if exists
         self.session
 
-        output = ''
-        # header: metadata
-        output += f'<link rel="stylesheet" type="text/css" href="{config.style_get}"/>'
-        output += f'<meta charset="UTF-8">'
-        output += f'<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+        output  = '<!DOCTYPE html>\n'
+        output += '<html lang="en">\n'
+        output += '<head>\n'
 
-        # header: logo and title
-        output += f'<div class="kdlp_logo">'
-        output += f'<img src="{config.logo_get}" alt="[KDLP] logo" class="kdlp_logo" />'
-        output += f'<h1 class="title">{config.title}</h1>'
-        output += f'</div>'
+        # metadata
+        output += f'<link rel="stylesheet" type="text/css" href="{config.style_get}">\n'
+        output += '<meta charset="UTF-8">\n'
+        output += '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+        output += '<title>KDLP</title>\n'
 
-        # header: navigation bar
-        output += f'<hr />'
-        output += f'<div class="nav">'
-        output += ''.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>' for pair in config.nav_buttons])
-        output += f'</div>'
-        output += f'<hr />'
+        output += '</head>\n'
+        output += '<body>\n'
+
+        # body header: logo and title
+        output += '<div class="logo">\n'
+        output += f'<img src="{config.logo_get}" alt="logo" class="logo">\n'
+        output += f'<h1 class="title">{config.title}</h1>\n'
+        output += '</div>\n'
+
+        # body header: navigation bar
+        output += '<hr>\n'
+        output += f'<div class="nav">\n'
+        output += '\n'.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>' for pair in config.nav_buttons])
+        output += '</div>\n'
+        output += '<hr>\n'
 
         # body: the main page content
         output += doc
 
-        # footer: key/value info pairs
-        msgdoc  = []
-        msgdoc += [(    'msg',  self._msg)]
-        msgdoc += [('whoami',   self.username)]
-        msgdoc += [('appname',  config.appname)]
-        msgdoc += [('version',  config.version)]
-        msgdoc += [('source',   config.source)]
+        # body footer
+        output += '<hr>\n'
+        output += f'<code>msg = {self._msg}</code><br>\n'
+        output += f'<code>whoami  = {self.username}</code><br>\n'
+        output += f'<code>{config.appname} {config.version} {config.source}</code>\n'
+        output += '<hr>\n'
 
-        output += '<hr />'
-        output += ''.join([f'<code>{key} = {value} <br /></code>' for key, value in msgdoc])
-        output += '<hr />'
+        output += '</body>\n'
+        output += '</html>\n'
 
         return output
 
