@@ -18,13 +18,6 @@ SSL_RAW="$(certbot certificates -d "$FQDN")"
 SSL_CRT="$(printf "$SSL_RAW" | awk -F': ' '/Certificate Path/ { print $2 }')"
 SSL_KEY="$(printf "$SSL_RAW" | awk -F': ' '/Private Key Path/ { print $2 }')"
 
-PRODUCTION="$(./config.py production)"
-
-if [ "$PRODUCTION" = "False" ]; then
-	DEV_BLOCK=$(echo -e "\n\t\tlocation = /devfooter {\n\t\t\tinternal;\n\t\t\treturn 200 \"<br><hr><i><b>Development Instance</b></i><hr>\";\n\t\t}\n\n\n")
-	DEV_OPT=$(echo -e "\t\tadd_after_body /devfooter;\n\t\t")
-fi
-
 cat <<EOF
 # orbit nginx configuration
 # generated on $(date) by $(basename "$0")
@@ -81,7 +74,6 @@ http {
 			default_type application/json;
 			add_header Access-Control-Allow-Origin *;
 		}
-		$DEV_BLOCK
 		location = / {
 		    rewrite .* /index.md;
 		}
@@ -90,7 +82,6 @@ http {
 		location ~* ^((.*\.md)|/log(in|out)|/dashboard|/register|/mail_auth|/cgit.*)$ {
 			include uwsgi_params;
 			proxy_pass http://localhost:$RADIUS_PORT;
-			$DEV_OPT
 		}
 	}
 	server {
