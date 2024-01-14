@@ -20,79 +20,24 @@ min_per_ses = cfg.ses_mins
 encode    = lambda dat: bytes(dat, "UTF-8")
 decode    = lambda dat: str(dat, "UTF-8")
 
-# HTML helpers
+def mk_table(row_list, html_class, indentation_level=0):
+    # Create <th> elements in first row, and <td> elements afterwards
+    first_row = True
+    indenter = lambda adjustment: '\t' * (indentation_level + adjustment)
 
-# shorthand key:
-# c := content within the tag
-# s := tag class
-# h := href or src link
-# i := indentation level
-# a := full attribute string
-# l := list to insert between subtags
+    output  = f'{indenter(0)}<table>'
+    for row in row_list:
+        output += f'{indenter(1)}<tr>'
+        for column in row:
+            if first_row:
+                output += f'{indenter(2)}<th>{column}</th>'
+                first_row = False
+            else:
+                output += f'{indenter(2)}<td>{column}</td>'
+        output += f'{indenter(1)}</tr>'
+    output += f'{indenter(0)}</table>'
 
-# indent string c with i tabs and append newline
-mk_t      = lambda c, i=0    : '\t'*i + f'{c}\n'
-#def mk_t(c, i=0):
-    #print("mk_t", i, c, file=sys.stderr)
-    #return '\t'*i + f'{c}<br />'
-
-
-# generalized attribute inserters
-mk_dtattr = lambda t, c, a='', i=0: mk_t(f'<{t}{a}>{c}</{t}>', i)
-mk_otattr = lambda t, a='', i=0: mk_t(f'<{t}{a} />', i)
-
-
-# fallback class for generated HTML
-cdfl = 'radius_default'
-
-# for simple usage, take just the class
-mk_dubtag = lambda t, c, s=cdfl, i=0: mk_dtattr(t, c, f' class="{s}"', i=i)
-
-# no conent so just take tag and class
-mk_onetag = lambda t, s=cdfl, i=0: mk_t(f'<{t} class="{s}" />', i=i)
-
-# direct HTML tag makers
-mk_h    = lambda v, c, s=cdfl, i=0: mk_dubtag("h" + str(v), c, s, i)
-mk_li   = lambda            c, i=0: mk_dubtag("li", c, i)
-_lihelp = lambda            l, i=0: '\n'.join([mk_li(_li, i) for _li in k])
-
-# for blocks with indented content in  a\n\t\b\c form
-_3linefmt = '{}\n{}\n{}'
-mk_tblock = lambda a, b, c, i=0: _3linefmt.format(mk_t(a, i), mk_t(b, i+1), mk_t(c, i))
-
-mk_ul   = lambda            l, i=0: mk_tblock("<ul>", _lihelp(l, i+1), "</ul>", i)
-
-
-_afmt = ' href="{}" class="{}"'
-mk_a    = lambda h, t, s=cdfl, i=0: mk_dtattr("a", t, _afmt.format(h, s), i)
-mk_code = lambda    c, s=cdfl, i=0: mk_dubtag("code", c, s, i)
-
-# x used for alt text attribute value
-_imgfmt = ' src="{}" class="{}" alt="{}"'
-mk_img  = lambda h, x, s=cdfl, i=0: mk_otattr("img", _imgfmt.format(h, s, x) , i)
-
-# no default class for div: it's required as the first argument
-_divfmt = '<div class="{}">'
-mk_div  = lambda         s, c, i=0: mk_tblock(_divfmt.format(s), c, "</div>")
-
-
-# pass h=1 for table header
-mk_td   = lambda    c, s, h=0, i=0: mk_dubtag(f't{["d","h"][h]}', c, s, i)
-
-_trhelp = lambda      l, s, h, i=0: '\n'.join([mk_td(_td, s, h, i) for _td in l])
-mk_tr   = lambda      l, s, h, i=0: mk_tblock("<tr>", _trhelp(l, s, h, i+1), "</tr>", i)
-
-_tbhelp = lambda         l, s, i=0: '\n'.join([mk_tr(_tr, s, j == 0, i) for j, _tr  in enumerate(l)])
-mk_tbl  = lambda    l, s=cdfl, i=0: mk_tblock("<table>", _tbhelp(l, s, i), "</table>")
-
-# compound HTML makers
-mk_sep    = lambda         i=0: mk_t(f'<hr />', i)
-mk_chrset = lambda         i=0: mk_t('<meta charset="UTF-8">', i)
-mk_msgfmt = lambda     kv, i=0: mk_code(('{} = {} <br />').format(*kv), i)
-mk_msgblk = lambda b, kvs, i=0: b + ''.join([mk_msgfmt(kv, i) for kv in kvs]) + b
-_stylefmt = '<link rel="stylesheet" type="text/css" href="{}"/>'
-mk_style  = lambda         i=0: mk_t(_stylefmt.format(cfg.style_get), i)
-mk_navbt  =  lambda  h, t, i=0: mk_a(t, h, 'nav')
+    return output
 
 # === user session handling ===
 
@@ -355,37 +300,41 @@ class Rocket:
     def format_html(self, doc):
         # generate a reproduction of the original header without too much abstraction for initial version
 
-        # general constants
-
-        # Prepare logo
-        logo_div_doc  = ''
-        logo_div_doc += mk_img(cfg.logo_get, '[KDLP] logo', 'kdlp_logo')
-        logo_div_doc += mk_h('1', cfg.title, 'title')
-        logo_div_gen  =  lambda: mk_div('logo', logo_div_doc)
-
-        # Prepare nav
-        nav_kvs = cfg.nav_buttons
-        nav_btn_gen =    lambda: ''.join([mk_navbt(pair[1], pair[0]) for pair in nav_kvs])
-        nav_div_gen =    lambda: f'<hr />{mk_div("nav", nav_btn_gen())}{mk_sep()}\n'
-
         # loads cookie if exists
         self.session
 
-        # Prepare footer
+        output = ''
+        # header: metadata
+        output += f'<link rel="stylesheet" type="text/css" href="{cfg.style_get}"/>'
+        output += f'<meta charset="UTF-8">'
+
+        # header: logo and title
+        output += f'<div class="kdlp_logo">'
+        output += f'<img src="{cfg.logo_get}" alt="[KDLP] logo" class="kdlp_logo" />'
+        output += f'<h1 class="title">{cfg.title}</h1>'
+        output += f'</div>'
+
+        # header: navigation bar
+        output += f'<hr />'
+        output += f'<div class="nav">'
+        output += ''.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>' for pair in cfg.nav_buttons])
+        output += f'</div>'
+        output += f'<hr />'
+
+        # body: the main page content
+        output += doc
+
+        # footer: key/value info pairs
         msgdoc  = []
         msgdoc += [(    'msg',  self._msg)]
         msgdoc += [('whoami',   self.username)]
         msgdoc += [('appname',  cfg.appname)]
         msgdoc += [('version',  cfg.version)]
         msgdoc += [('source',   cfg.source)]
-        # Concatenate all components to complete this format operation
-        output = ''
-        output += mk_style()
-        output += mk_chrset()
-        output += logo_div_gen()
-        output += nav_div_gen()
-        output += doc
-        output += mk_msgblk(mk_sep(), msgdoc)
+
+        output += '<hr />'
+        output += ''.join([f'<code>{key} = {value} <br /></code>' for key, value in msgdoc])
+        output += '<hr />'
 
         return output
 
@@ -444,7 +393,7 @@ form_logout="""
 """
 
 def cookie_info_table(session):
-    return mk_tbl([
+    return mk_table([
         ('Cookie Key', 'Value'),
         ('Token', session.token),
         ('User', session.username),
