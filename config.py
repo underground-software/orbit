@@ -9,7 +9,6 @@ refresh     = 0
 appname     = 'orbit'
 version     = '0.1'
 source      = 'https://github.com/underground-software/orbit'
-docsrc      = 'https://github.com/underground-software/kdlp.underground.software'
 
 radius_port = '9098'
 
@@ -21,7 +20,7 @@ pop3_port_ext= '995'
 
 matrix_port = '8448'
 
-# make exernal GET request to find these documents
+# These paths are used by browser GET requests (the are not server abspaths)
 logo_get    = '/images/kdlp_logo.png'
 style_get   = '/style.css'
 
@@ -30,9 +29,7 @@ orbit_root   = '/orbit'
 
 # read these documents from a filesystem path
 dataroot    = f'{orbit_root}/docs'
-# TODO: this will become /var/orbit/databse/orbit.db or something
 database    = f'{orbit_root}/orbit.db'
-basedata    = f'{orbit_root}/default.orbit.db.dump'
 
 email_dir   = f'{orbit_root}/email'
 

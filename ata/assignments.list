@@ -1,0 +1,11 @@
+# map external assignment names to email server
+# webname email_dirname
+setup introductions
+E0 exercise0
+E1 exercise1
+E2 exercise2
+P0 programming0
+P1 programming1
+P2 programming2
+F0 final0
+F1 final1
