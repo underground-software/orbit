@@ -4,7 +4,6 @@
 
 srvname     = 'kdlp.underground.software'
 production  = False
-refresh     = 0
 
 appname     = 'orbit'
 version     = '0.1'
