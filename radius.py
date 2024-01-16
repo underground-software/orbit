@@ -126,7 +126,8 @@ class Session:
         return res
 
     def valid(self):
-        return self.token and not self.expired()
+        if not self.expired():
+            return self.token
 
     def mk_hash(self, username):
         hash_input = username + str(datetime.now())
@@ -134,7 +135,7 @@ class Session:
 
     def expired(self):
         if (expiry := self.expiry) is None or datetime.utcnow() > expiry:
-            db.ses_delby_token(self.token)
+            self.end()
             return True
         else:
             return False
@@ -241,19 +242,26 @@ class Rocket:
     def session(self):
         if self._session is None:
             self._session = Session(env=self.env)
-        return self._session if self._session.valid() else None
+        # if the session is invalid, clear the user cookie
+        if not self._session.valid():
+            self.headers += self._session.mk_cookie_header()
+        else:
+            return self._session
 
     @property
     def username(self):
-        return self._session.username if self._session else None
+        if session := self.session:
+            return session.username
 
     @property
     def token(self):
-        return self._session.token if self._session else None
+        if session := self.session:
+            return session.token
 
     @property
     def expiry(self):
-        return self._session.expiry if self._session else None
+        if session := self.session:
+            return session.expiry
 
     # Attempt login using urelencoded credentials from request body
     def launch(self):
