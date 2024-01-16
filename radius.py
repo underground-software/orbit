@@ -341,7 +341,8 @@ class Rocket:
         if not mail_auth:
             self.headers += [('Content-Type', 'text/html')]
             response_document = self.format_html(response_document)
-        self._start_response(f'{response_code.value} {response_code.phrase}', self.headers)
+        self._start_response(f'{response_code.value} {response_code.phrase}',
+                             self.headers)
         return [encode(response_document)]
 
 
@@ -436,7 +437,7 @@ def handle_mail_auth(rocket):
     if not username or not password \
             or protocol not in ('smtp', 'pop3') \
             or method != 'plain':
-        rocker.headers += [('Auth-Status', 'Invalid Request')]
+        rocket.headers += [('Auth-Status', 'Invalid Request')]
         return rocket.respond(HTTPStatus.BAD_REQUEST, '', mail_auth=True)
 
     # Strange, but a request in valid form with bad credentials returns OK
