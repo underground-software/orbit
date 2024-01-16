@@ -20,10 +20,10 @@ RUN apk update && apk upgrade && apk add \
     git
 
 # Install radius deps
-COPY pip.deps /pip.deps
+COPY requirements.txt /requirements.txt
 RUN python3 -m venv /radius-venv && \
     source /radius-venv/bin/activate && \
-    pip install -r /pip.deps
+    pip install -r /requirements.txt
 
 COPY cgitrc /etc/cgitrc
 
