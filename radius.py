@@ -25,7 +25,6 @@ min_per_ses = config.minutes_each_session_token_is_valid
 
 def encode(dat): return bytes(dat, "UTF-8")
 def decode(dat): return str(dat, "UTF-8")
-def identity_function(x): return x
 
 
 def mk_table(row_list, indentation_level=0):
@@ -209,19 +208,15 @@ class Rocket:
         else:
             return {None: '(no body)'}
 
-    def __init__(self, env, start_res):
+    def __init__(self, env, start_response):
         self.env = env
-        self._start_res = start_res
+        self._start_response = start_response
         self.path_info = self.env.get("PATH_INFO", "/")
         self.queries = parse_qs(self.env.get("QUERY_STRING", ""))
         self._session = None
         self._msg = "(silence)"
         # HTTP response headers specified by list of string pairs
         self.headers = []
-        # enable page formatter selection
-        # right now we just make the header and footer for HTML
-        # and user the identity function by default
-        self.format = identity_function
         self.body_args = self.read_body_args_wsgi()
 
     def __repr__(self):
@@ -294,25 +289,6 @@ class Rocket:
         self._session.end()
         self.headers += self._session.mk_cookie_header()
 
-    # Set appropriate headers
-    def parse_content_type(self, content_type):
-        match content_type.split('/'):
-            case ['text', subtype]:
-                self.headers += [('Content-Type', f'text/{subtype}')]
-                if subtype == 'html':
-                    self.format = self.format_html
-            case ['auth', 'badreq']:
-                self.headers += [('Auth-Status', 'Invalid Request')]
-            case ['auth', 'badcreds']:
-                self.headers += [('Auth-Status', 'Invalid Credentials')]
-            case ['auth', auth_port]:
-                self.headers += [('Auth-Status', 'OK'),
-                                 ('Auth-Port',    auth_port),
-                                 ('Auth-Server', '127.0.0.1')]
-            case _:
-                return False
-        return True
-
     def format_html(self, doc):
         # loads cookie if exists
         self.session
@@ -363,20 +339,14 @@ class Rocket:
 
         return output
 
-    def respond(self, *content_desc):
+    def respond(self, response_code, response_document, mail_auth=False):
         # Given total correctness of the server
         # all user requests end up here
-        match content_desc:
-            case (code, content_type, content) \
-                    if self.parse_content_type(content_type):
-                document = self.format(content)
-            case _:
-                self.parse_content_type('text/plain')
-                code = HTTPStatus.INTERNAL_SERVER_ERROR
-                document = 'ERROR: BAD RADIUS CONTENT DESCRIPTION'
-        # print(f'respond {code.phrase} {self.headers} /document}')
-        self._start_res(f'{code.value} {code.phrase}', self.headers)
-        return [encode(document)]
+        if not mail_auth:
+            self.headers += [('Content-Type', 'text/html')]
+            response_document = self.format_html(response_document)
+        self._start_response(f'{response_code.value} {response_code.phrase}', self.headers)
+        return [encode(response_document)]
 
 
 form_welcome_template = """
@@ -457,7 +427,7 @@ def handle_login(rocket):
     else:
         rocket.msg('welcome, please login')
         response_document = form_login
-    return rocket.respond(response_status, 'text/html', response_document)
+    return rocket.respond(response_status, response_document)
 
 
 def handle_mail_auth(rocket):
@@ -470,12 +440,14 @@ def handle_mail_auth(rocket):
     if not username or not password \
             or protocol not in ('smtp', 'pop3') \
             or method != 'plain':
-        return rocket.respond(HTTPStatus.BAD_REQUEST, 'auth/badreq', '')
+        rocker.headers += [('Auth-Status', 'Invalid Request')]
+        return rocket.respond(HTTPStatus.BAD_REQUEST, '', mail_auth=True)
 
     # Strange, but a request in valid form with bad credentials returns OK
     if (pwdhash := db.usr_pwdhashfor_username(username)[0]) is None \
             or not bcrypt.checkpw(encode(password), encode(pwdhash[0])):
-        return rocket.respond(HTTPStatus.OK, 'auth/badcreds', '')
+        rocket.headers += [('Auth-Status', 'Invalid Credentials')]
+        return rocket.respond(HTTPStatus.OK, '', mail_auth=True)
 
     # The authentication port depends on whether we are an lfx user
     # and which service we are using. FIXME: redesign this area
@@ -486,13 +458,16 @@ def handle_mail_auth(rocket):
             'LFX': {'smtp': '1466', 'pop3': '1966'}
     }[instance][protocol]
 
-    return rocket.respond(HTTPStatus.OK, f'auth/{auth_port}', '')
+    rocket.headers += [('Auth-Status', 'OK'),
+                       ('Auth-Port',    auth_port),
+                       ('Auth-Server', '127.0.0.1')]
+    return rocket.respond(HTTPStatus.OK, '', mail_auth=True)
 
 
 def handle_logout(rocket):
     if rocket.session:
         rocket.retire()
-    return rocket.respond(HTTPStatus.OK, 'text/html', form_logout)
+    return rocket.respond(HTTPStatus.OK, form_logout)
 
 
 def handle_dashboard(rocket):
@@ -502,7 +477,7 @@ def handle_dashboard(rocket):
 def handle_stub(rocket, more=[]):
     meth_path = f'{rocket.method} {rocket.path_info}'
     content = f'<h3>Development stub for {meth_path} </h3>{"".join(more)}'
-    return rocket.respond(HTTPStatus.OK, 'text/html', content)
+    return rocket.respond(HTTPStatus.OK, content)
 
 
 def handle_register(rocket):
@@ -519,7 +494,7 @@ def handle_cgit(rocket):
     so, se = proc.communicate()
     outstring = str(so, 'UTF-8')
     outstring = outstring.split('\n\n', 1)[1]
-    return rocket.respond(HTTPStatus.OK, 'text/html', outstring)
+    return rocket.respond(HTTPStatus.OK, outstring)
 
 
 # TODO: use this to implement register FIXME
@@ -548,7 +523,7 @@ def handle_md(rocket, md_path):
     with open(md_path, 'r', newline='') as f:
         content = markdown.markdown(f.read(),
                                     extensions=['tables', 'fenced_code'])
-        return rocket.respond(HTTPStatus.OK, 'text/html', content)
+        return rocket.respond(HTTPStatus.OK, content)
 
 
 def handle_try_md(rocket):
@@ -557,8 +532,7 @@ def handle_try_md(rocket):
             and os.access(md_path, os.R_OK):
         return handle_md(rocket, md_path)
     else:
-        return rocket.respond(HTTPStatus.NOT_FOUND,
-                              'text/html', 'HTTP 404 NOT FOUND')
+        return rocket.respond(HTTPStatus.NOT_FOUND, 'HTTP 404 NOT FOUND')
 
 
 def application(env, SR):
