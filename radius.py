@@ -80,9 +80,6 @@ class Session:
     valid()
         Get truth of whether this session is valid at time of call
 
-    extend()
-        If the session is valid, reset expiry to $mins_per_ses
-
     expired()
         Get truth of whether this $self.expiry is in the past
 
@@ -120,11 +117,6 @@ class Session:
                     self.token = ses_found[0]
                     self.username = ses_found[1]
                     self.expiry = datetime.fromtimestamp(ses_found[2])
-
-    def extend(self):
-        if self.valid():
-            self.expiry = datetime.utcnow() + timedelta(minutes=min_per_ses)
-            db.ses_setexpiry_token((self.expiry.timestamp(), self.token))
 
     def end(self):
         return db.ses_delby_token(self.token)
@@ -276,13 +268,6 @@ class Rocket:
                 self._session = new_ses
                 self.headers += self._session.mk_cookie_header()
             return self.session
-
-    # Renew current sesssion and set user auth cookie accordingly
-    def refuel(self):
-        if self.session:
-            self._session.extend()
-            self.headers += self._session.mk_cookie_header()
-        return self.session
 
     # Logout of current session and clear user auth cookie
     def retire(self):
