@@ -119,7 +119,11 @@ class Session:
                     self.expiry = datetime.fromtimestamp(ses_found[2])
 
     def end(self):
-        return db.ses_delby_token(self.token)
+        res = db.ses_delby_token(self.token)
+        self.token = None
+        self.username = None
+        self.expiry = None
+        return res
 
     def valid(self):
         return self.token and not self.expired()
@@ -142,9 +146,8 @@ class Session:
         return self.expiry.timestamp()
 
     def mk_cookie_header(self):
-        print("MAKE COOKIE HEADER", self.token)
         if self.token is None:
-            return [('Set-Cookie', '')]
+            return [('Set-Cookie', 'auth=')]
         cookie_fmt = 'auth={}; Expires={}; Max-Age={}; Path=/'
         max_age = sec_per_min * min_per_ses
         cookie_val = cookie_fmt.format(self.token, self.expiry_fmt(), max_age)
