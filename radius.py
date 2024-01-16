@@ -11,8 +11,7 @@ from urllib.parse import parse_qs
 import config, db
 
 sec_per_min = 60
-min_per_ses = config.ses_mins
-
+min_per_ses = config.minutes_each_session_token_is_valid
 # utilities
 
 encode    = lambda dat: bytes(dat, "UTF-8")

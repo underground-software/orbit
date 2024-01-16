@@ -36,7 +36,7 @@ database    = f'{orbit_root}/orbit.db'
 email_dir   = f'{orbit_root}/email'
 
 # duration of authentication token validity period
-ses_mins    = 180
+minutes_each_session_token_is_valid = 180
 
 title       = 'Kernel Development Learning Pipeline'
 nav_buttons = [
