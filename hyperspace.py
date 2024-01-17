@@ -139,7 +139,10 @@ def do_newuser(args):
     if db.usr_getby_username(args.username)[0]:
         errx(f'cannot create duplicate user "{args.username}"')
     else:
-        db.usr_ins((args.username, do_bcrypt_hash(args, get=True), 0, 0))
+        db.usr_ins((args.username, do_bcrypt_hash(args, get=True),
+                    0, args.studentid or 0))
+    if args.studentid:
+        db.reg_ins((args.username, args.password, args.studentid))
     do_validate_creds(args)
 
 
@@ -191,6 +194,7 @@ def hyperspace_main(raw_args):
 
     parser.add_argument('-u', '--username', help='Username to operate with')
     parser.add_argument('-p', '--password', help='Password to operate with')
+    parser.add_argument('-i', '--studentid', help='Student ID to operate with')
     parser.add_argument('-t', '--token', help='Token to operate with')
     parser.add_argument('-e', '--exercise',
                         help='Assignment/Exercise to operate with')
