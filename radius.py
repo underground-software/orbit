@@ -479,12 +479,31 @@ form_register = """
 """.strip()
 
 
+register_response = """
+<h1>Save these credentials, you will not be able to access them again</h1><br>
+<h3>Username: %(username)s</h1><br>
+<h3>Password: %(password)s</h1><br>
+""".strip()
+
+
 def handle_register(rocket):
     response_document = form_register
     response_status = HTTPStatus.OK
     rocket.msg('welcome, please register')
     if rocket.method == 'POST':
-        return handle_stub(rocket, ['register in development, check back later'])  # NOQA: E501
+        if student_id := rocket.body_args_query('student_id'):
+            if registration_data := db.reg_getby_stuid(student_id)[0]:
+                (regid, username, password) = registration_data
+                db.reg_delby_regid(regid)
+                response_document = register_response % {
+                    'username': username,
+                    'password': password,
+                }
+                rocket.msg('welcome to the classroom')
+            else:
+                rocket.msg('no such student')
+        else:
+            rocket.msg('you must provide a student id')
     return rocket.respond(response_status, response_document)
 
 
