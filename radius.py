@@ -480,7 +480,12 @@ form_register = """
 
 
 def handle_register(rocket):
-    return handle_stub(rocket, [f'<code><br />{_OLD_NOTES}</code><br />'])
+    response_document = form_register
+    response_status = HTTPStatus.OK
+    rocket.msg('welcome, please register')
+    if rocket.method == 'POST':
+        return handle_stub(rocket, ['register in development, check back later'])  # NOQA: E501
+    return rocket.respond(response_status, response_document)
 
 
 def handle_cgit(rocket):
@@ -494,28 +499,6 @@ def handle_cgit(rocket):
     outstring = str(so, 'UTF-8')
     outstring = outstring.split('\n\n', 1)[1]
     return rocket.respond(HTTPStatus.OK, outstring)
-
-
-# TODO: use this to implement register FIXME
-_OLD_NOTES = """
-    form_data = parse_qs(env['wsgi.input'].read(int(env['CONTENT_LENGTH'])))
-    print(form_data)
-    if b'student_id' not in form_data or len(form_data[b'student_id']) != 1:
-        start_response('400 Bad Request', [('Content-Type', 'text/html')])
-        return '<h1>Bad Request</h1><br>\n'
-    result = accounts_db_exec(FIND_ACCOUNT_QUERY % escape(str(form_data[b'student_id'][0],'utf-8')))
-    if not result:
-        start_response('200 OK', [('Content-Type', 'text/html')])
-        return '<h1>No such user</h1><br>\n'
-    ((id, username, password),) = result
-    accounts_db_exec(DELETE_ACCOUNT_QUERY % id, commit=True)
-    start_response('200 OK', [('Content-Type', 'text/html')])
-    return f'''\
-    <h1>Save these credentials, you will not be able to access them again</h1><br>
-    <h3>Username: {username}</h1><br>
-    <h3>Password: {password}</h1><br>
-    return rocket.respond(sql.form_register())
-""".strip()  # NOQA: E501
 
 
 def handle_md(rocket, md_path):
