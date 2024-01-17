@@ -247,7 +247,7 @@ def reg_getby_stuid(sid): return _set(REG_GETBY_STUID, sid)
 
 
 REG_DELBY_REGID = """
-DELETE FROM accounts
-WHERE id = ?;
+DELETE FROM newusers
+WHERE registration_id = ?;
 """.strip()
 def reg_delby_regid(rid): return _get(REG_DELBY_REGID, rid)
