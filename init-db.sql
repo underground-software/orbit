@@ -21,6 +21,11 @@ CREATE TABLE submissions (
 CREATE TABLE assignments (
 	web_id string PRIMARY KEY,
 	email_id string NOT NULL);
+CREATE TABLE newusers (
+	registration_id integer primary key,
+	student_id string UNIQUE NOT NULL,
+	username string UNIQUE NOT NULL,
+	password string NOT NULL);
 INSERT INTO assignments (web_id, email_id) VALUES ('setup', 'introductions');
 INSERT INTO assignments (web_id, email_id) VALUES ('E0', 'exercise0');
 INSERT INTO assignments (web_id, email_id) VALUES ('E1', 'exercise1');
