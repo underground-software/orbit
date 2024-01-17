@@ -489,6 +489,7 @@ def handle_dashboard(rocket):
 def handle_stub(rocket, more=[]):
     meth_path = f'{rocket.method} {rocket.path_info}'
     content = f'<h3>Development stub for {meth_path} </h3>{"".join(more)}'
+    rocket.msg('oops')
     return rocket.respond(HTTPStatus.OK, content)
 
 
