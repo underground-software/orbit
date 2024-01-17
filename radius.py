@@ -400,15 +400,6 @@ def mk_form_welcome(session):
                                         form_welcome_buttons)
 
 
-form_register = """
-    <form id="register" method="post" action="/register">
-        <label for="student_id">Student ID:</label>
-        <input name="student_id" type="text" id="student_id" /><br />
-        <button type="submit">Submit</button>
-    </form>
-""".strip()
-
-
 def handle_login(rocket):
     response_document = form_login
     response_status = HTTPStatus.OK
@@ -468,15 +459,24 @@ def handle_logout(rocket):
     return rocket.respond(HTTPStatus.OK, form_logout)
 
 
-def handle_dashboard(rocket):
-    return handle_stub(rocket, ['dashboard in development, check back later'])
-
-
 def handle_stub(rocket, more=[]):
     meth_path = f'{rocket.method} {rocket.path_info}'
     content = f'<h3>Development stub for {meth_path} </h3>{"".join(more)}'
     rocket.msg('oops')
     return rocket.respond(HTTPStatus.OK, content)
+
+
+def handle_dashboard(rocket):
+    return handle_stub(rocket, ['dashboard in development, check back later'])
+
+
+form_register = """
+    <form id="register" method="post" action="/register">
+        <label for="student_id">Student ID:</label>
+        <input name="student_id" type="text" id="student_id" /><br />
+        <button type="submit">Submit</button>
+    </form>
+""".strip()
 
 
 def handle_register(rocket):
