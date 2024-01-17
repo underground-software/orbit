@@ -243,11 +243,11 @@ SELECT registration_id, username, password
 FROM newusers
 WHERE student_id = ?;
 """.strip()
-def reg_getby_stuid(sid): return _set(REG_GETBY_STUID, sid)
+def reg_getby_stuid(sid): return _get(REG_GETBY_STUID, sid)
 
 
 REG_DELBY_REGID = """
 DELETE FROM newusers
 WHERE registration_id = ?;
 """.strip()
-def reg_delby_regid(rid): return _get(REG_DELBY_REGID, rid)
+def reg_delby_regid(rid): return _set(REG_DELBY_REGID, rid)
