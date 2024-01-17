@@ -5,8 +5,7 @@ CREATE TABLE users (
 	username string UNIQUE NOT NULL,
 	pwdhash string NOT NULL,
 	lfx boolean NOT NULL,
-	student_id integer
-);
+	student_id integer);
 CREATE TABLE sessions (
         token string PRIMARY KEY,
         username string UNIQUE NOT NULL,
