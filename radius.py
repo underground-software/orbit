@@ -263,15 +263,16 @@ class Rocket:
         if session := self.session:
             return session.expiry
 
+    def body_args_query(self, key):
+        return html.escape(
+            decode(self.body_args.get(encode(key), [b''])[0]))
+
     # Attempt login using urelencoded credentials from request body
     def launch(self):
         new_ses = None
         if self.method == "POST":
-            def urldecode(key):
-                return html.escape(decode(self.body_args.get(encode(key),
-                                                             [b''])[0]))
-            username = urldecode('username')
-            password = urldecode('password')
+            username = self.body_args_query('username')
+            password = self.body_args_query('password')
             if (pwdhash := db.usr_pwdhashfor_username(username)[0]) and \
                     bcrypt.checkpw(encode(password), encode(pwdhash[0])):
                 new_ses = Session(username=username)
