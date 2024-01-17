@@ -232,8 +232,8 @@ def asn_get(): return _get(ASN_GET)
 # registration table inferface
 
 REG_INS = """
-INSERT VALUES username, password, student_id = (?,?,?)
-INTO accounts;
+INSERT INTO newusers (username, password, student_id)
+VALUES (?,?,?);
 """.strip()
 def reg_ins(tpl): return _set(REG_INS, tpl)
 
