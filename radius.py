@@ -348,6 +348,7 @@ form_login = """
     <br />
         <button type="submit">Submit</button>
     </form>
+    <h3>Need an account? Register <a href="/register">here</a></h3><br>
 """.strip()
 
 form_logout = """
