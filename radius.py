@@ -20,6 +20,9 @@ import db
 sec_per_min = 60
 min_per_ses = config.minutes_each_session_token_is_valid
 
+with open(config.doc_header) as header:
+    html_header = header.read()
+
 # === utilities ===
 
 
@@ -289,47 +292,7 @@ class Rocket:
     def format_html(self, doc):
         # loads cookie if exists
         self.session
-
-        # metadata
-        output = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-
-        <link rel="stylesheet" type="text/css" href="{config.style_get}">
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1.0">
-        <title>KDLP</title>
-        </head>
-        """
-
-        # Body
-        output += '<body>'
-
-        # body header: logo and title
-        output += f"""
-        <div class="logo">
-        <img src="{config.logo_get}" alt="logo" class="logo">
-        <h1 class="title">{config.title}</h1>
-        </div>
-        """
-
-        # body header: navigation bar
-        def nav(nb): return f'<a href="{nb[0]}" class="nav">{nb[1]}</a>'
-        nav_buttons = '\n'.join(map(nav, config.nav_buttons))
-        output += f"""
-        <hr>
-        <div class="nav">
-        {nav_buttons}
-        </div>
-        <hr>
-        """
-
-        # body: the main page content
-        output += doc
-
-        # body footer
-        output += f"""
+        return html_header + doc + f"""
         <hr>
         <code>msg = {self._msg}</code><br>
         <code>whoami  = {self.username}</code><br>
@@ -340,15 +303,9 @@ class Rocket:
             {config.source}
         </code>
         <hr>
-        """
-
-        # Body & document end
-        output += """
         </body>
         </html>
         """
-
-        return output
 
     def respond(self, response_code, response_document, mail_auth=False):
         # Given total correctness of the server

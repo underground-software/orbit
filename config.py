@@ -19,35 +19,16 @@ pop3_port_ext = '995'
 
 matrix_port = '8448'
 
-# These paths are used by browser GET requests (the are not server abspaths)
-logo_get = '/images/kdlp_logo.png'
-style_get = '/style.css'
-
-# HTML title: keeping it simple and static for now
-title = "KDLP"
-
-# this is also hard-coded in many files
-orbit_root = '/orbit'
-
 # read these documents from a filesystem path
+orbit_root = '/orbit'
 doc_root = f'{orbit_root}/docs'
+doc_header = f'{orbit_root}/header.html'
 database = f'{orbit_root}/orbit.db'
 
 email_dir = f'{orbit_root}/email'
 
 # duration of authentication token validity period
 minutes_each_session_token_is_valid = 180
-
-title = 'Kernel Development Learning Pipeline'
-nav_buttons = [
-    ('/index.md', 'Home'),
-    ('/course/index.md', 'Course'),
-    ('/login', 'Login'),
-    ('/register', 'Register'),
-    ('/dashboard', 'Dashboard'),
-    ('/who.md', 'Who'),
-    ('/info.md', 'Info'),
-    ('/cgit', 'Git')]
 
 sql_verbose = False
 
