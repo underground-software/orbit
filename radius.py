@@ -289,49 +289,62 @@ class Rocket:
         # loads cookie if exists
         self.session
 
-        output = '<!DOCTYPE html>\n'
-        output += '<html lang="en">\n'
-        output += '<head>\n'
-
         # metadata
-        output += '<link rel="stylesheet" type="text/css"'
-        output += f' href="{config.style_get}">\n'
-        output += '<meta charset="UTF-8">\n'
-        output += '<meta name="viewport" content="width=device-width,'
-        output += ' initial-scale=1.0">\n'
-        output += '<title>KDLP</title>\n'
+        output = f'''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
 
-        output += '</head>\n'
-        output += '<body>\n'
+        <link rel="stylesheet" type="text/css" href="{config.style_get}">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <title>KDLP</title>
+        </head>
+        '''
+
+        # Body
+        output += '<body>'
 
         # body header: logo and title
-        output += '<div class="logo">\n'
-        output += f'<img src="{config.logo_get}" alt="logo" class="logo">\n'
-        output += f'<h1 class="title">{config.title}</h1>\n'
-        output += '</div>\n'
+        output += f'''
+        <div class="logo">
+        <img src="{config.logo_get}" alt="logo" class="logo">
+        <h1 class="title">{config.title}</h1>
+        </div>
+        '''
 
         # body header: navigation bar
-        output += '<hr>\n'
-        output += '<div class="nav">\n'
-        output += '\n'.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>'
-                             for pair in config.nav_buttons])
-        output += '</div>\n'
-        output += '<hr>\n'
+        nav_buttons = '\n'.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>' for pair in config.nav_buttons])
+        output += f'''
+        <hr>
+        <div class="nav">
+        {nav_buttons}
+        </div>
+        <hr>
+        '''
 
         # body: the main page content
         output += doc
 
         # body footer
-        output += '<hr>\n'
-        output += f'<code>msg = {self._msg}</code><br>\n'
-        output += f'<code>whoami  = {self.username}</code><br>\n'
-        output += f'<code>{config.appname} {config.version}'
-        output += f' {"in development" if not config.production else ""}'
-        output += f' {config.source}</code>\n'
-        output += '<hr>\n'
+        output += f'''
+        <hr>
+        <code>msg = {self._msg}</code><br>
+        <code>whoami  = {self.username}</code><br>
+        <code>
+            {config.appname} 
+            {config.version}
+            {"in development" if not config.production else ""}
+            {config.source}
+        </code>
+        <hr>
+        '''
 
-        output += '</body>\n'
-        output += '</html>\n'
+        # Body & document end
+        output += f'''
+        </body>
+        </html>
+        '''
 
         return output
 
