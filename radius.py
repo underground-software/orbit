@@ -290,7 +290,7 @@ class Rocket:
         self.session
 
         # metadata
-        output = f'''
+        output = f"""
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -300,51 +300,52 @@ class Rocket:
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
         <title>KDLP</title>
         </head>
-        '''
+        """
 
         # Body
         output += '<body>'
 
         # body header: logo and title
-        output += f'''
+        output += f"""
         <div class="logo">
         <img src="{config.logo_get}" alt="logo" class="logo">
         <h1 class="title">{config.title}</h1>
         </div>
-        '''
+        """
 
         # body header: navigation bar
-        nav_buttons = '\n'.join([f'<a href="{pair[0]}" class="nav">{pair[1]}</a>' for pair in config.nav_buttons])
-        output += f'''
+        def nav(nb): return f'<a href="{nb[0]}" class="nav">{nb[1]}</a>'
+        nav_buttons = '\n'.join(map(nav, config.nav_buttons))
+        output += f"""
         <hr>
         <div class="nav">
         {nav_buttons}
         </div>
         <hr>
-        '''
+        """
 
         # body: the main page content
         output += doc
 
         # body footer
-        output += f'''
+        output += f"""
         <hr>
         <code>msg = {self._msg}</code><br>
         <code>whoami  = {self.username}</code><br>
         <code>
-            {config.appname} 
+            {config.appname}
             {config.version}
             {"in development" if not config.production else ""}
             {config.source}
         </code>
         <hr>
-        '''
+        """
 
         # Body & document end
-        output += f'''
+        output += """
         </body>
         </html>
-        '''
+        """
 
         return output
 
