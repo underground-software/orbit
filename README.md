@@ -13,9 +13,11 @@
 
 4. Build and launch orbit with `cd docker && docker-compose up --build`.
 
-5. Orbit is now available as a web app. Use `cd docker && docker-compose down` to return to earth before re-launching with new changes.
+5. On systems with SELinux enabled, run `chcon -Rt svirt_sandbox_file_t docs` in the respository.
 
-6. Use `test-style.sh` to ensure style compliance before contributing code.
+6. Orbit is now available as a web app. Use `cd docker && docker-compose down` to return to earth before re-launching with new changes.
+
+7. Use `test-style.sh` to ensure style compliance before contributing code.
 
 ### Development checklist:
 
