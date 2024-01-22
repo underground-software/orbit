@@ -11,10 +11,10 @@ cache-size=0
 logo=/images/kdlp_logo.png
 
 # Set the title and heading of the repository index page
-root-title=Kernel Development Learning Pipeline
+root-title=Kernel Development Learning Pipeline Git Repositories
 
 # Set a subheading for the repository index page
-root-desc=KDLP Git repositories
+root-desc=Explore the class git repositories here!
 
 # Include some more info about this site on the index page
 # FIXME do we want a readme or not?
