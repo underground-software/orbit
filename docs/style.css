@@ -160,14 +160,14 @@ hr {
 	margin: 0;
 }
 
-.nav {
+.navbar {
 	display: flex;
 	flex-wrap: wrap;
 	text-align: center;
 	box-sizing: border-box;
 }
 
-a.nav {
+.navbtn {
 	padding: 0.5em;
 	font-size: 1.3em;
 	border-left: 1px solid black;
@@ -176,7 +176,7 @@ a.nav {
 	text-decoration: none;
 }
 
-a.nav:last-child {
+.navbtn:last-child {
 	border-right: 1px solid black;
 }
 
