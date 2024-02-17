@@ -25,6 +25,10 @@ RUN apk update && apk upgrade && apk add \
 
 COPY --from=build /orbit /orbit
 COPY --from=build /radius-venv /radius-venv
+
+RUN mkdir /var/git
+VOLUME /var/git
+
 COPY cgitrc /etc/cgitrc
 
 EXPOSE 9098
