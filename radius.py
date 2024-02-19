@@ -23,6 +23,9 @@ min_per_ses = config.minutes_each_session_token_is_valid
 with open(config.doc_header) as header:
     html_header = header.read()
 
+import socket
+host_ip = socket.getaddrinfo('host.containers.internal',None,socket.AF_INET,socket.SOCK_STREAM,socket.IPPROTO_TCP)[0][4][0]
+
 # === utilities ===
 
 
@@ -421,7 +424,7 @@ def handle_mail_auth(rocket):
 
     rocket.headers += [('Auth-Status', 'OK'),
                        ('Auth-Port',    auth_port),
-                       ('Auth-Server', '127.0.0.1')]
+                       ('Auth-Server', host_ip)]
     return rocket.respond(HTTPStatus.OK, '', mail_auth=True)
 
 
