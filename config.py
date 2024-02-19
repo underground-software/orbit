@@ -11,10 +11,12 @@ source = 'https://github.com/underground-software/orbit'
 
 radius_port = '9098'
 
-smtp_port = '1465'
+smtp_port_dfl = '1465'
+smtp_port_lfx = '1466'
 smtp_port_ext = '465'
 
-pop3_port = '1995'
+pop3_port_dfl = '1995'
+pop3_port_lfx = '1996'
 pop3_port_ext = '995'
 
 matrix_port = '8448'

@@ -415,8 +415,8 @@ def handle_mail_auth(rocket):
     instance = ['DFL', 'LFX'][
             int(db.usr_getif_lfx_username(username)[0][0]) != 0]
     auth_port = {
-            'DFL': {'smtp': '1465', 'pop3': '1995'},
-            'LFX': {'smtp': '1466', 'pop3': '1966'}
+            'DFL': {'smtp': config.smtp_port_dfl, 'pop3': config.pop3_port_dfl},
+            'LFX': {'smtp': config.smtp_port_lfx, 'pop3': config.pop3_port_lfx}
     }[instance][protocol]
 
     rocket.headers += [('Auth-Status', 'OK'),
