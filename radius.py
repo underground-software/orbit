@@ -12,6 +12,7 @@ import subprocess
 from http import HTTPStatus, cookies
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs
+import sys
 
 # === internal imports & constants ===
 import config
@@ -491,6 +492,12 @@ def handle_cgit(rocket):
                             stderr=subprocess.PIPE,
                             env=cgit_env)
     so, se = proc.communicate()
+    if (proc.returncode != 0):
+        errstring = str(se, 'UTF-8').strip()
+        print(f'cgit: {errstring} (exited with code {proc.returncode})',
+              file=sys.stderr)
+        return rocket.respond(HTTPStatus.BAD_GATEWAY,
+                              '<h1>502 BAD GATEWAY!</h1>')
     outstring = str(so, 'UTF-8')
     begin = outstring.index('\n\n')
     return rocket.respond(HTTPStatus.OK, outstring[begin+2:])
