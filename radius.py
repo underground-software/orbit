@@ -486,6 +486,8 @@ def handle_register(rocket):
 def handle_cgit(rocket):
     cgit_env = os.environ.copy()
     cgit_env['PATH_INFO'] = rocket.path_info.removeprefix('/cgit')
+    if (re.search("^/[\w\-\.]+/plain(/|$)", cgit_env['PATH_INFO'])):
+        return rocket.respond(HTTPStatus.NOT_FOUND, '<h1>404 NOT FOUND</h1>')
     cgit_env['QUERY_STRING'] = rocket.env.get('QUERY_STRING', '')
     proc = subprocess.Popen(['/usr/share/webapps/cgit/cgit'],
                             stdout=subprocess.PIPE,
