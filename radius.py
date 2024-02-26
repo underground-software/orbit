@@ -500,8 +500,14 @@ def handle_cgit(rocket):
               file=sys.stderr)
         return rocket.respond(HTTPStatus.BAD_GATEWAY,
                               '<h1>502 BAD GATEWAY!</h1>')
-    outstring = str(so, 'UTF-8')
-    begin = outstring.index('\n\n')
+    try:
+        outstring = str(so, 'UTF-8')
+        begin = outstring.index('\n\n')
+    except:
+        print(f'Problem locating double newlines from raw cgit output "{so}"',
+               file=sys.stderr)
+        return rocket.respond(HTTPStatus.BAD_GATEWAY,
+                              '<h1>502 BAD GATEWAY!</h1>')
     return rocket.respond(HTTPStatus.OK, outstring[begin+2:])
 
 
