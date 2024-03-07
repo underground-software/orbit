@@ -16,13 +16,17 @@ def errx(msg):
     exit(1)
 
 
-def need(a, u=False, p=False, t=False):
+def need(a, u=False, p=False, t=False, asn=False, grade=False):
     if u and a.username is None:
         errx("Need username. Bye.")
     if p and a.password is None:
         errx("Need password. Bye.")
     if t and a.token is None:
         errx("Need token. Bye.")
+    if asn and a.asn is None:
+        errx("Need assignment. Bye.")
+    if grade and a.grade is None:
+        errx("Need grade. Bye.")
 
 
 def nou(u):
@@ -134,6 +138,18 @@ def do_bcrypt_hash(args, get=False):
         print(res)
 
 
+def do_set_grade(args):
+    need(args, u=True, asn=True, grade=True)
+
+    new_grade = db.grd_setby_username_asn((int(args.grade),
+                                           args.username,
+                                           args.asn))[0]
+    if new_grade is None:
+        print("null")
+    else:
+        print(f'({new_grade[0]}, {new_grade[1]}, {new_grade[2]})')
+
+
 def do_newuser(args):
     need(args, u=True, p=True)
     if db.usr_getby_username(args.username)[0]:
@@ -143,6 +159,8 @@ def do_newuser(args):
                     0, args.studentid or 0))
     if args.studentid:
         db.reg_ins((args.username, args.password, args.studentid))
+    for asn in db.asn_get():
+        db.grd_ins((args.username, asn[0], None))
     do_validate_creds(args)
 
 
@@ -196,7 +214,9 @@ def hyperspace_main(raw_args):
     parser.add_argument('-p', '--password', help='Password to operate with')
     parser.add_argument('-i', '--studentid', help='Student ID to operate with')
     parser.add_argument('-t', '--token', help='Token to operate with')
-    parser.add_argument('-e', '--exercise',
+    parser.add_argument('-g', '--grade',
+                        help='Grade to operate with', type=int)
+    parser.add_argument('-e', '--asn',
                         help='Assignment/Exercise to operate with')
 
     actions = parser.add_mutually_exclusive_group()
@@ -242,7 +262,9 @@ def hyperspace_main(raw_args):
     actions.add_argument('-a', '--assignments', action='store_const',
                          help='Get the full assignment list',
                          dest='do', const=do_list_asn)
-
+    actions.add_argument('-f', '--setgrade', action='store_const',
+                         help='Set a grade for a student and assignment',
+                         dest='do', const=do_set_grade)
     actions.add_argument('-z', '--plaininboxes', action='store_const',
                          help='Get plain list of local submission inboxes',
                          dest='do', const=do_list_inbox)

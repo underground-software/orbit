@@ -9,6 +9,7 @@ import markdown
 import os
 import re
 import subprocess
+import socket
 from http import HTTPStatus, cookies
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs
@@ -23,8 +24,11 @@ min_per_ses = config.minutes_each_session_token_is_valid
 with open(config.doc_header) as header:
     html_header = header.read()
 
-import socket
-host_ip = socket.getaddrinfo('host.containers.internal',None,socket.AF_INET,socket.SOCK_STREAM,socket.IPPROTO_TCP)[0][4][0]
+host_ip = socket.getaddrinfo('host.containers.internal',
+                             None,
+                             socket.AF_INET,
+                             socket.SOCK_STREAM,
+                             socket.IPPROTO_TCP)[0][4][0]
 
 # === utilities ===
 
@@ -44,10 +48,10 @@ def mk_table(row_list, indentation_level=0):
         for column in row:
             if first_row:
                 output += f'{indenter(2)}<th>{column}</th>'
-                first_row = False
             else:
                 output += f'{indenter(2)}<td>{column}</td>'
         output += f'{indenter(1)}</tr>'
+        first_row = False
     output += f'{indenter(0)}</table>'
 
     return output
@@ -321,21 +325,7 @@ class Rocket:
         return [encode(response_document)]
 
 
-form_welcome_template = """
-    <div class="logout_info">
-        <div class="logout_left">
-        {}
-        </div>
-        <div class="logout_right">
-            <h5> Welcome!</h5>
-         </div>
-    </div>
-    <div class="logout_buttons">
-    {}
-    </div>
-""".strip()
-
-form_welcome_buttons = """
+form_logout_button = """
     <form id="logout">
         <input class="logout" type="button" onclick="location.href='/logout';" value="Logout" />
     </form>
@@ -354,25 +344,17 @@ form_login = """
     <h3>Need an account? Register <a href="/register">here</a></h3><br>
 """.strip()
 
-form_logout = """
+redirect_to_login = """
 <head>
     <meta http-equiv="Refresh" content="0; URL=/login" />
 </head>
-"""
+""".strip()
 
-
-def cookie_info_table(session):
-    return mk_table([
-        ('Cookie Key', 'Value'),
-        ('Token', session.token),
-        ('User', session.username),
-        ('Expiry', session.expiry_fmt()),
-        ('Remaining Validity', str(session.expiry - datetime.utcnow()))])
-
-
-def mk_form_welcome(session):
-    return form_welcome_template.format(cookie_info_table(session),
-                                        form_welcome_buttons)
+redirect_to_dashboard = """
+<head>
+    <meta http-equiv="Refresh" content="0; URL=/dashboard" />
+</head>
+""".strip()
 
 
 def handle_login(rocket):
@@ -380,11 +362,11 @@ def handle_login(rocket):
     response_status = HTTPStatus.OK
     if rocket.session:
         rocket.msg(f'{rocket.username} authenticated by token')
-        response_document = mk_form_welcome(rocket.session)
+        response_document = redirect_to_dashboard
     elif rocket.method == "POST":
         if rocket.launch():
             rocket.msg(f'{rocket.username} authenticated by password')
-            response_document = mk_form_welcome(rocket.session)
+            response_document = redirect_to_dashboard
         else:
             rocket.msg('authentication failure')
             response_status = HTTPStatus.UNAUTHORIZED
@@ -418,8 +400,8 @@ def handle_mail_auth(rocket):
     instance = ['DFL', 'LFX'][
             int(db.usr_getif_lfx_username(username)[0][0]) != 0]
     auth_port = {
-            'DFL': {'smtp': config.smtp_port_dfl, 'pop3': config.pop3_port_dfl},
-            'LFX': {'smtp': config.smtp_port_lfx, 'pop3': config.pop3_port_lfx}
+        'DFL': {'smtp': config.smtp_port_dfl, 'pop3': config.pop3_port_dfl},
+        'LFX': {'smtp': config.smtp_port_lfx, 'pop3': config.pop3_port_lfx}
     }[instance][protocol]
 
     rocket.headers += [('Auth-Status', 'OK'),
@@ -431,7 +413,7 @@ def handle_mail_auth(rocket):
 def handle_logout(rocket):
     if rocket.session:
         rocket.retire()
-    return rocket.respond(HTTPStatus.OK, form_logout)
+    return rocket.respond(HTTPStatus.OK, redirect_to_login)
 
 
 def handle_stub(rocket, more=[]):
@@ -442,7 +424,58 @@ def handle_stub(rocket, more=[]):
 
 
 def handle_dashboard(rocket):
-    return handle_stub(rocket, ['dashboard in development, check back later'])
+    if not rocket.session:
+        return rocket.respond(HTTPStatus.OK, redirect_to_login)
+
+    content = f'<h2>{rocket.username}\'s dashboard</h2>'
+    table_input = [('Gradable', 'Grade')]
+
+    grades = db.grd_getby_username(rocket.username)
+    cat_dict = {
+        'exercise': [],
+        'program': [],
+        'midpoint': [],
+        'final': [],
+        'participation': [],
+    }
+    for grd in grades:
+        cat = db.asn_getby_web_name(grd[1])[0][2]
+        if grd[2] is not None:
+            cat_dict[cat] += [grd[2]]
+        table_input += [(grd[1], grd[2] if grd[2] is not None else " ")]
+
+    exrs = cat_dict['exercise']
+    exercise_average = sum(exrs)/len(exrs) if len(exrs) > 0 else 0
+
+    progs = cat_dict['program']
+    program_average = sum(progs)/len(progs) if len(progs) > 0 else 0
+
+    fins = cat_dict['final']
+    final_average = sum(fins)/len(fins) if len(fins) > 0 else 0
+
+    mids = cat_dict['midpoint']
+    mids_average = sum(mids)/len(mids) if len(mids) > 0 else 0
+
+    parts = cat_dict['participation']
+    parts_average = sum(parts)/len(parts) if len(parts) > 0 else 0
+
+    general_average = \
+        program_average * 0.3 + \
+        exercise_average * 0.2 + \
+        mids_average * 0.15 + \
+        final_average * 0.3 + \
+        parts_average * 0.05
+
+    table_input += [('Exercise Average', exercise_average)]
+    table_input += [('Program Average', program_average)]
+    table_input += [('Final Items', final_average)]
+    table_input += [('Course grade', general_average)]
+
+    content += mk_table(table_input)
+
+    content += '<br>' + form_logout_button + '<br>'
+
+    return rocket.respond(HTTPStatus.OK, content)
 
 
 form_register = """

@@ -1,10 +1,5 @@
 import sqlite3
 import config
-# nickname  table name
-# USR => users
-# ASN => assignments
-# SUB => submissions
-# REG => newusers
 import sys
 
 
@@ -34,6 +29,13 @@ def _get(cmd, reps=()): return _do(cmd, reps, get_=True)
 
 
 # session table interface
+
+# nickname  table name
+# USR       users
+# ASN       assignments
+# SUB       submissions
+# REG       newusers
+# GRD       grades
 
 SES_GETBY_TOKEN = """
 SELECT token, username, expiry
@@ -182,22 +184,22 @@ def sub_get(): return _get(SUB_GET)
 
 
 SUB_INS = """
-INSERT INTO submissions (sub_id, username, timestamp, _from, _to, email_ids, subjects)
+INSERT INTO submissions (submission_id, username, _timestamp, _from, _to, email_ids, subjects)
 VALUES (?,?,?,?,?,?,?);
 """.strip()  # NOQA: E501
 def sub_ins(sub): return _set(SUB_INS, sub)
 
 
 SUB_GETBY_SUBID = """
-SELECT sub_id, username, timestamp, _from, _to, email_ids, subjects
+SELECT submission_id, username, _timestamp, _from, _to, email_ids, subjects
 FROM submissions
-WHERE sub_id = ?;
+WHERE submission_id = ?;
 """.strip()
 def sub_getby_subid(sid): return _get(SUB_GETBY_SUBID, sid)
 
 
 SUB_GETBY_USERNAME = """
-SELECT sub_id, username, timestamp, _from, _to, email_ids, subjects
+SELECT submission_id, username, _timestamp, _from, _to, email_ids, subjects
 FROM submissions
 WHERE user = ?;
 """.strip()
@@ -206,20 +208,20 @@ def sub_getby_username(usr): return _get(SUB_GETBY_USERNAME, usr)
 
 # assignment table interface
 
-ASN_GETBY_WID = """
-SELECT web_id, email_id
+ASN_GETBY_WEB_NAME = """
+SELECT web_name, email_name, category
 FROM assignments
-WHERE web_id = ?;
+WHERE web_name = ?;
 """.strip()
-def asn_getby_webid(wid): return _get(ASN_GETBY_WID, wid)
+def asn_getby_web_name(wnm): return _get(ASN_GETBY_WEB_NAME, wnm)
 
 
-ASN_GETBY_EID = """
-SELECT web_id, email_id
+ASN_GETBY_EMAIL_NAME = """
+SELECT web_name, email_name, category
 FROM assignments
-WHERE email_id = ?;
+WHERE email_name = ?;
 """.strip()
-def asn_getby_email_id(eid): return _get(ASN_GETBY_EID, eid)
+def asn_getby_email_name(enm): return _get(ASN_GETBY_EMAIL_NAME, enm)
 
 
 ASN_GET = """
@@ -251,3 +253,30 @@ DELETE FROM newusers
 WHERE registration_id = ?;
 """.strip()
 def reg_delby_regid(rid): return _set(REG_DELBY_REGID, rid)
+
+
+# grade table interface
+
+GRD_INS = """
+INSERT INTO grades (student_username, assignment_name, grade)
+VALUES (?, ?, ?);
+""".strip()
+def grd_ins(tpl): return _set(GRD_INS, tpl)
+
+
+GRD_GETBY_USERNAME = """
+SELECT *
+FROM grades
+WHERE student_username = ?
+ORDER BY ROWID;
+""".strip()
+def grd_getby_username(usr): return _get(GRD_GETBY_USERNAME, usr)
+
+
+GRD_SETBY_USERNAME_ASN = """
+UPDATE grades
+SET grade = ?
+WHERE student_username = ? AND assignment_name = ?
+RETURNING student_username, assignment_name, grade;
+""".strip()
+def grd_setby_username_asn(tpl): return _set(GRD_SETBY_USERNAME_ASN, tpl)
