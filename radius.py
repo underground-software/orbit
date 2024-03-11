@@ -23,9 +23,6 @@ min_per_ses = config.minutes_each_session_token_is_valid
 with open(config.doc_header) as header:
     html_header = header.read()
 
-import socket
-host_ip = socket.getaddrinfo('host.containers.internal',None,socket.AF_INET,socket.SOCK_STREAM,socket.IPPROTO_TCP)[0][4][0]
-
 # === utilities ===
 
 
@@ -418,13 +415,17 @@ def handle_mail_auth(rocket):
     instance = ['DFL', 'LFX'][
             int(db.usr_getif_lfx_username(username)[0][0]) != 0]
     auth_port = {
-            'DFL': {'smtp': config.smtp_port_dfl, 'pop3': config.pop3_port_dfl},
-            'LFX': {'smtp': config.smtp_port_lfx, 'pop3': config.pop3_port_lfx}
+        'DFL': {'smtp': config.smtp_port_dfl, 'pop3': config.pop3_port_dfl},
+        'LFX': {'smtp': config.smtp_port_lfx, 'pop3': config.pop3_port_lfx},
     }[instance][protocol]
+    auth_server = {
+        'pop3': config.pop3_host,
+        'smtp': config.smtp_host,
+    }[protocol]
 
     rocket.headers += [('Auth-Status', 'OK'),
-                       ('Auth-Port',    auth_port),
-                       ('Auth-Server', host_ip)]
+                       ('Auth-Port', auth_port),
+                       ('Auth-Server', auth_server)]
     return rocket.respond(HTTPStatus.OK, '', mail_auth=True)
 
 
